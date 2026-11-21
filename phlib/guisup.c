@@ -508,11 +508,19 @@ HFONT PhInitializeFont(
 {
     HFONT fontHandle;
 
+    if (WindowsVersion >= WINDOWS_11)
+    {
+        if (fontHandle = PhCreateFontHandle(L"Segoe UI Variable Text", 9, FW_NORMAL, DEFAULT_PITCH, WindowDpi))
+            return fontHandle;
+    }
+
+    if (fontHandle = PhCreateFontHandle(L"Segoe UI", 9, FW_NORMAL, DEFAULT_PITCH, WindowDpi))
+        return fontHandle;
+    if (fontHandle = PhCreateMessageFont(WindowDpi))
+        return fontHandle;
     if (fontHandle = PhCreateFontHandle(L"Microsoft Sans Serif", 8, FW_NORMAL, DEFAULT_PITCH, WindowDpi))
         return fontHandle;
     if (fontHandle = PhCreateFontHandle(L"Tahoma", 8, FW_NORMAL, DEFAULT_PITCH, WindowDpi))
-        return fontHandle;
-    if (fontHandle = PhCreateMessageFont(WindowDpi))
         return fontHandle;
 
     // Owned font factories must never return a stock handle. Callers that
@@ -526,6 +534,14 @@ HFONT PhInitializeMonospaceFont(
 {
     HFONT fontHandle;
 
+    if (WindowsVersion >= WINDOWS_11)
+    {
+        if (fontHandle = PhCreateFontHandle(L"Cascadia Mono", 9, FW_DONTCARE, FF_MODERN, WindowDpi))
+            return fontHandle;
+    }
+
+    if (fontHandle = PhCreateFontHandle(L"Consolas", 9, FW_DONTCARE, FF_MODERN, WindowDpi))
+        return fontHandle;
     if (fontHandle = PhCreateFontHandle(L"Lucida Console", 9, FW_DONTCARE, FF_MODERN, WindowDpi))
         return fontHandle;
     if (fontHandle = PhCreateFontHandle(L"Courier New", 9, FW_DONTCARE, FF_MODERN, WindowDpi))

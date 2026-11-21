@@ -685,7 +685,7 @@ VOID StatusBarUpdate(
         else
             widths[count] = 0;
 
-        width = size.cx + 10;
+        width = size.cx + 16;
 
         if (resetMaxWidths)
             StatusBarMaxWidths[count] = 0;

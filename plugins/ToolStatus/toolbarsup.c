@@ -53,8 +53,7 @@ BOOLEAN RebarBandInsert(
 
         rebarBandInfo.fMask |= RBBIM_COLORS;
         rebarBandInfo.clrFore = palette->TextColor;
-        // Light theme: match the white command bar background drawn by the menu bar/toolbar.
-        rebarBandInfo.clrBack = ToolbarIsDarkTheme() ? palette->BackgroundColor : GetSysColor(COLOR_WINDOW);
+        rebarBandInfo.clrBack = palette->BackgroundColor;
     }
 
     ULONG index = SearchboxHandle ? RebarBandToIndex(REBAR_BAND_ID_SEARCHBOX) : ULONG_MAX;
@@ -97,7 +96,7 @@ VOID RebarUpdateBandColors(
             const PH_WINDOW_THEME_PALETTE* palette = PhGetWindowThemePalette();
 
             rebarBandInfo.clrFore = palette->TextColor;
-            rebarBandInfo.clrBack = ToolbarIsDarkTheme() ? palette->BackgroundColor : GetSysColor(COLOR_WINDOW);
+            rebarBandInfo.clrBack = palette->BackgroundColor;
         }
         else
         {

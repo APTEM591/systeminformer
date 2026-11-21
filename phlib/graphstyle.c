@@ -80,12 +80,12 @@ static VOID PhpInitializeBuiltInStyles(
     style = &PhpBuiltInStyles[3];
     PhpInitializeBuiltInStyle(style, L"classic-dark", L"Classic Dark", TRUE, FALSE, FALSE, PhGraphFillSolid, 100);
 
-    // Palette from PR #3108.
+    // Windows 11 Task Manager Fluent graph palette.
     style = &PhpBuiltInStyles[4];
-    PhpInitializeBuiltInStyle(style, L"microsoft-light", L"Microsoft Light", FALSE, TRUE, FALSE, PhGraphFillTranslucent, 80);
+    PhpInitializeBuiltInStyle(style, L"microsoft-light", L"Microsoft Light", FALSE, TRUE, TRUE, PhGraphFillTranslucent, 84);
     style->PanelBackColor = RGB(0xff, 0xff, 0xff);
-    style->GridColor = RGB(0xd9, 0xeb, 0xf5);
-    style->TextColor = RGB(0x00, 0x00, 0x00);
+    style->GridColor = RGB(0xe2, 0xee, 0xf7);
+    style->TextColor = RGB(0x1a, 0x1a, 0x1a);
     style->TextBoxColor = RGB(0xff, 0xff, 0xff);
     style->SeriesColor[PhGraphSeriesCpuKernel] = RGB(0x11, 0x7d, 0xbb);
     style->SeriesColor[PhGraphSeriesCpuUser] = RGB(0x11, 0x7d, 0xbb);
@@ -95,11 +95,11 @@ static VOID PhpInitializeBuiltInStyles(
     style->SeriesColor[PhGraphSeriesPhysical] = RGB(0x8b, 0x12, 0xae);
 
     style = &PhpBuiltInStyles[5];
-    PhpInitializeBuiltInStyle(style, L"microsoft-dark", L"Microsoft Dark", TRUE, TRUE, FALSE, PhGraphFillTranslucent, 80);
-    style->PanelBackColor = RGB(0x19, 0x19, 0x19);
-    style->GridColor = RGB(0x2b, 0x3a, 0x44);
+    PhpInitializeBuiltInStyle(style, L"microsoft-dark", L"Microsoft Dark", TRUE, TRUE, TRUE, PhGraphFillTranslucent, 84);
+    style->PanelBackColor = RGB(0x20, 0x20, 0x20);
+    style->GridColor = RGB(0x2d, 0x3b, 0x45);
     style->TextColor = RGB(0xff, 0xff, 0xff);
-    style->TextBoxColor = RGB(0x20, 0x20, 0x20);
+    style->TextBoxColor = RGB(0x2b, 0x2b, 0x2b);
     style->SeriesColor[PhGraphSeriesCpuKernel] = RGB(0x4c, 0xc2, 0xff);
     style->SeriesColor[PhGraphSeriesCpuUser] = RGB(0x4c, 0xc2, 0xff);
     style->SeriesColor[PhGraphSeriesIoReadOther] = RGB(0x6c, 0xcb, 0x5f);
@@ -201,7 +201,7 @@ PPH_GRAPH_STYLE NTAPI PhGsFindStyle(
 
     PhGsGetBuiltInStyles(&styles);
 
-    return DarkMode ? &styles[1] : &styles[0];
+    return DarkMode ? &styles[5] : &styles[4];
 }
 
 BOOLEAN NTAPI PhGsValidateName(
@@ -895,8 +895,8 @@ VOID NTAPI PhGsMigrateLegacy(
         shared = TRUE;
         break;
     default:
-        light = styles[0];
-        dark = styles[1];
+        light = styles[4];
+        dark = styles[5];
         break;
     }
 

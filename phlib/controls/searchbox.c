@@ -135,37 +135,70 @@ VOID PhSearchControlInitializeColors(
     _In_ PPH_SEARCHCONTROL_CONTEXT Context
     )
 {
-    static const COLORREF WindowBorderInnerThemeColor = RGB(60, 60, 60);
-    static const COLORREF WindowBorderInnerClassicColor = RGB(60, 60, 60);
-    static const COLORREF ButtonPushedThemeColor = RGB(99, 99, 99);
-    static const COLORREF ButtonPushedClassicColor = RGB(153, 209, 255);
-    static const COLORREF ButtonHotActiveThemeColor = RGB(54, 54, 54);
-    static const COLORREF ButtonHotActiveClassicColor = RGB(133, 199, 255);
-    static const COLORREF ButtonHotThemeColor = RGB(78, 78, 78);
-    static const COLORREF ButtonHotClassicColor = RGB(205, 232, 255);
-    static const COLORREF ButtonErrorThemeColor = RGB(100, 28, 30);
-    static const COLORREF ButtonErrorClassicColor = RGB(255, 155, 155);
-    static const COLORREF ButtonActiveThemeColor = RGB(44, 44, 44);
-    static const COLORREF ButtonActiveClassicColor = RGB(123, 189, 255);
-    static const COLORREF FrameHotClassicColor = RGB(43, 43, 43);
-    static const COLORREF CueBannerTextThemeColor = RGB(170, 170, 170);
+    BOOLEAN darkMode = PhThemeWindowUseDarkBackground();
 
     Context->DcBrush = PhStockDcBrush;
-    Context->WindowBrush = GetSysColorBrush(COLOR_WINDOW);
+    Context->WindowBrush = PhEnableThemeSupport ? PhThemeWindowBackgroundBrush : GetSysColorBrush(COLOR_WINDOW);
 
-    Context->WindowBorderOuterColor = PhThemeWindowBackground2Color;
-    Context->WindowBorderInnerColor = PhSearchControlSelectColor(WindowBorderInnerThemeColor, WindowBorderInnerClassicColor);
-    Context->WindowBackgroundColor = PhSearchControlSelectColor(PhThemeWindowBackgroundColor, GetSysColor(COLOR_WINDOW));
-    Context->FrameDefaultColor = PhSearchControlSelectColor(PhThemeWindowWindowFrameColor, GetSysColor(COLOR_WINDOWFRAME));
-    Context->ButtonPushedColor = PhSearchControlSelectColor(ButtonPushedThemeColor, ButtonPushedClassicColor);
-    Context->ButtonHotActiveColor = PhSearchControlSelectColor(ButtonHotActiveThemeColor, ButtonHotActiveClassicColor);
-    Context->ButtonHotColor = PhSearchControlSelectColor(ButtonHotThemeColor, ButtonHotClassicColor);
-    Context->ButtonErrorColor = PhSearchControlSelectColor(ButtonErrorThemeColor, ButtonErrorClassicColor);
-    Context->ButtonActiveColor = PhSearchControlSelectColor(ButtonActiveThemeColor, ButtonActiveClassicColor);
-    Context->ButtonDefaultColor = PhSearchControlSelectColor(WindowBorderInnerThemeColor, GetSysColor(COLOR_WINDOW));
-    Context->FrameHotColor = PhSearchControlSelectColor(PhThemeWindowHighlight2Color, FrameHotClassicColor);
-    Context->CueBannerTextColor = PhSearchControlSelectColor(CueBannerTextThemeColor, GetSysColor(COLOR_GRAYTEXT));
-    Context->CueBannerBackgroundColor = PhSearchControlSelectColor(WindowBorderInnerThemeColor, GetSysColor(COLOR_WINDOW));
+    if (PhEnableThemeSupport)
+    {
+        if (darkMode)
+        {
+            Context->WindowBorderOuterColor = PhThemeWindowBackgroundColor;
+            Context->WindowBorderInnerColor = PhThemeWindowEditColor;
+            Context->WindowBackgroundColor = PhThemeWindowEditColor;
+            Context->FrameDefaultColor = PhThemeWindowBorderColor;
+            Context->FrameHotColor = PhThemeWindowHighlight2Color;
+            Context->ButtonDefaultColor = PhThemeWindowEditColor;
+            Context->ButtonHotColor = PhThemeWindowBackground2Color;
+            Context->ButtonPushedColor = PhThemeWindowHighlightColor;
+            Context->ButtonActiveColor = PhThemeWindowHighlightColor;
+            Context->ButtonHotActiveColor = PhThemeWindowHighlight2Color;
+            Context->ButtonErrorColor = RGB(100, 28, 30);
+            Context->CueBannerTextColor = PhThemeWindowDisabledTextColor;
+            Context->CueBannerBackgroundColor = PhThemeWindowEditColor;
+        }
+        else
+        {
+            Context->WindowBorderOuterColor = PhThemeWindowBackgroundColor;
+            Context->WindowBorderInnerColor = PhThemeWindowEditColor;
+            Context->WindowBackgroundColor = PhThemeWindowEditColor;
+            Context->FrameDefaultColor = PhThemeWindowBorderColor;
+            Context->FrameHotColor = RGB(180, 180, 180);
+            Context->ButtonDefaultColor = PhThemeWindowEditColor;
+            Context->ButtonHotColor = PhThemeWindowBackground2Color;
+            Context->ButtonPushedColor = PhThemeWindowHighlight2Color;
+            Context->ButtonActiveColor = PhThemeWindowHighlightColor;
+            Context->ButtonHotActiveColor = PhThemeWindowHighlight2Color;
+            Context->ButtonErrorColor = RGB(255, 200, 200);
+            Context->CueBannerTextColor = PhThemeWindowDisabledTextColor;
+            Context->CueBannerBackgroundColor = PhThemeWindowEditColor;
+        }
+    }
+    else
+    {
+        static const COLORREF WindowBorderInnerClassicColor = RGB(60, 60, 60);
+        static const COLORREF ButtonPushedClassicColor = RGB(153, 209, 255);
+        static const COLORREF ButtonHotActiveClassicColor = RGB(133, 199, 255);
+        static const COLORREF ButtonHotClassicColor = RGB(205, 232, 255);
+        static const COLORREF ButtonErrorClassicColor = RGB(255, 155, 155);
+        static const COLORREF ButtonActiveClassicColor = RGB(123, 189, 255);
+        static const COLORREF FrameHotClassicColor = RGB(43, 43, 43);
+
+        Context->WindowBorderOuterColor = PhThemeWindowBackground2Color;
+        Context->WindowBorderInnerColor = WindowBorderInnerClassicColor;
+        Context->WindowBackgroundColor = GetSysColor(COLOR_WINDOW);
+        Context->FrameDefaultColor = GetSysColor(COLOR_WINDOWFRAME);
+        Context->ButtonPushedColor = ButtonPushedClassicColor;
+        Context->ButtonHotActiveColor = ButtonHotActiveClassicColor;
+        Context->ButtonHotColor = ButtonHotClassicColor;
+        Context->ButtonErrorColor = ButtonErrorClassicColor;
+        Context->ButtonActiveColor = ButtonActiveClassicColor;
+        Context->ButtonDefaultColor = GetSysColor(COLOR_WINDOW);
+        Context->FrameHotColor = FrameHotClassicColor;
+        Context->CueBannerTextColor = GetSysColor(COLOR_GRAYTEXT);
+        Context->CueBannerBackgroundColor = GetSysColor(COLOR_WINDOW);
+    }
 }
 
 /**
@@ -543,11 +576,34 @@ VOID PhSearchControlPaintButton(
 {
     RECT buttonRect;
     ULONG imageIndex;
+    COLORREF buttonColor;
 
     PhSearchControlButtonRect(Context, Button, WindowRect, &buttonRect);
+    buttonColor = PhSearchControlButtonColor(Context, Button);
 
-    SetDCBrushColor(Hdc, PhSearchControlButtonColor(Context, Button));
+    // Fill behind the pill with the search box surface first, then draw a Win11 rounded pill when hot/active/pushed.
+    SetDCBrushColor(Hdc, Context->CueBannerBackgroundColor);
     FillRect(Hdc, &buttonRect, Context->DcBrush);
+
+    if (buttonColor != Context->ButtonDefaultColor)
+    {
+        RECT pillRect = buttonRect;
+        LONG inset = PhScaleToDisplay(2, Context->WindowDpi);
+        LONG radius = PhScaleToDisplay(4, Context->WindowDpi);
+        HBRUSH oldBrush;
+        HPEN oldPen;
+
+        PhInflateRect(&pillRect, -inset, -inset);
+        if (pillRect.right > pillRect.left && pillRect.bottom > pillRect.top)
+        {
+            SetDCBrushColor(Hdc, buttonColor);
+            oldBrush = SelectBrush(Hdc, Context->DcBrush);
+            oldPen = SelectPen(Hdc, PhGetStockPen(NULL_PEN));
+            RoundRect(Hdc, pillRect.left, pillRect.top, pillRect.right, pillRect.bottom, radius * 2, radius * 2);
+            SelectPen(Hdc, oldPen);
+            SelectBrush(Hdc, oldBrush);
+        }
+    }
 
     if (Button->Active && Button->ActiveImageIndex != ULONG_MAX)
         imageIndex = Button->ActiveImageIndex;
@@ -559,7 +615,7 @@ VOID PhSearchControlPaintButton(
         if (Button == &Context->FuzzyButton)
         {
             HFONT oldFont;
-            COLORREF textColor = PhEnableThemeSupport ? RGB(222, 222, 222) : GetSysColor(COLOR_BTNTEXT);
+            COLORREF textColor = PhEnableThemeSupport ? PhThemeWindowTextColor : GetSysColor(COLOR_BTNTEXT);
 
             oldFont = SelectFont(Hdc, Context->WindowFont);
             SetBkMode(Hdc, TRANSPARENT);
@@ -617,6 +673,57 @@ VOID PhSearchControlPaintFrame(
     _In_ PRECT WindowRect
     )
 {
+    if (PhEnableThemeSupport && WindowsVersion >= WINDOWS_11)
+    {
+        RECT frameRect = *WindowRect;
+        LONG radius = PhScaleToDisplay(4, Context->WindowDpi);
+        BOOLEAN focused = (GetFocus() == WindowHandle);
+        COLORREF borderColor = focused ? PhThemeWindowFocusBorderColor :
+            (Context->Hot ? Context->FrameHotColor : Context->FrameDefaultColor);
+        HPEN borderPen;
+        HPEN oldPen;
+        HBRUSH oldBrush;
+
+        // Fill outer corners with parent background so the rounded corners blend seamlessly.
+        SetDCBrushColor(Hdc, Context->WindowBorderOuterColor);
+        FillRect(Hdc, &frameRect, Context->DcBrush);
+
+        borderPen = CreatePen(PS_SOLID, 1, borderColor);
+        oldPen = borderPen ? SelectPen(Hdc, borderPen) : NULL;
+        SetDCBrushColor(Hdc, Context->CueBannerBackgroundColor);
+        oldBrush = SelectBrush(Hdc, Context->DcBrush);
+
+        RoundRect(
+            Hdc,
+            frameRect.left,
+            frameRect.top,
+            frameRect.right,
+            frameRect.bottom,
+            radius * 2,
+            radius * 2
+            );
+
+        SelectBrush(Hdc, oldBrush);
+        if (oldPen)
+            SelectPen(Hdc, oldPen);
+        if (borderPen)
+            DeletePen(borderPen);
+
+        // Iconic WinUI 3 bottom accent underline when focused.
+        if (focused)
+        {
+            RECT accentBar = frameRect;
+            LONG barHeight = PhScaleToDisplay(2, Context->WindowDpi);
+
+            accentBar.left += radius / 2;
+            accentBar.right -= radius / 2;
+            accentBar.top = accentBar.bottom - barHeight;
+            SetDCBrushColor(Hdc, PhThemeWindowFocusBorderColor);
+            FillRect(Hdc, &accentBar, Context->DcBrush);
+        }
+        return;
+    }
+
     RECT frameRect = *WindowRect;
 
     SetDCBrushColor(Hdc, PhSearchControlFrameColor(Context, WindowHandle));

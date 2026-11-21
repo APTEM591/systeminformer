@@ -635,20 +635,34 @@ VOID PhMwpInitializeControls(
     }
 
     // Create controls for the main window
+    {
+        BOOLEAN useSidebar = !!PhGetIntegerSetting(SETTING_MAIN_WINDOW_SIDEBAR_NAVIGATION);
+        ULONG tabStyle = WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | TNS_REORDER;
 
-    TabControlHandle = PhCreateWindow(
-        MAKEINTATOM(PhTabNewWindowAtom),
-        NULL,
-        WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VISIBLE | TNS_TOP | TNS_MULTILINE | TNS_FIXEDWIDTH | TNS_REORDER,
-        x,
-        y,
-        width,
-        height,
-        WindowHandle,
-        NULL,
-        NULL,
-        NULL
-        );
+        if (useSidebar)
+            tabStyle |= TNS_LEFT;
+        else
+            tabStyle |= TNS_TOP | TNS_MULTILINE | TNS_FIXEDWIDTH;
+
+        TabControlHandle = PhCreateWindow(
+            MAKEINTATOM(PhTabNewWindowAtom),
+            NULL,
+            tabStyle,
+            x,
+            y,
+            width,
+            height,
+            WindowHandle,
+            NULL,
+            NULL,
+            NULL
+            );
+
+        if (TabControlHandle && (PhEnableThemeSupport || useSidebar))
+        {
+            PhTabNew_SetSkin(TabControlHandle, PhTabNewSkinWin11);
+        }
+    }
 
     PhMwpProcessTreeNewHandle = PhCreateWindow(
         MAKEINTATOM(PhTreeWindowAtom),
@@ -868,11 +882,13 @@ VOID PhMwpOnSettingChange(
 
     if (Action == 0 && Metric && PhEqualStringZ(Metric, L"ImmersiveColorSet", TRUE))
     {
-        // The user toggled the Windows light/dark preference. In Automatic mode
-        // re-theme all open windows live to match.
-        if (PhEnableThemeSupport && PhGetIntegerSetting(SETTING_THEME_MODE) == PhThemeModeAutomatic)
+        // The user toggled the Windows light/dark preference or accent color.
+        // In Automatic or Windows 11 Fluent (Explorer) mode, re-theme live to match.
+        ULONG themeMode = PhGetIntegerSetting(SETTING_THEME_MODE);
+
+        if (PhEnableThemeSupport && (themeMode == PhThemeModeAutomatic || themeMode == PhThemeModeExplorer))
         {
-            PhApplyThemeMode(PhThemeModeAutomatic, WindowHandle);
+            PhApplyThemeMode(themeMode, WindowHandle);
             PhSiNotifyChangeSettings();
         }
     }
@@ -1492,6 +1508,25 @@ VOID PhMwpOnCommand(
             PhSetIntegerSetting(SETTING_MAIN_WINDOW_ALWAYS_ON_TOP, AlwaysOnTop);
 
             PhWindowNotifyTopMostEvent(AlwaysOnTop);
+        }
+        break;
+    case ID_VIEW_SIDEBARNAVIGATION:
+        {
+            BOOLEAN useSidebar = !PhGetIntegerSetting(SETTING_MAIN_WINDOW_SIDEBAR_NAVIGATION);
+            HDWP deferHandle;
+
+            PhSetIntegerSetting(SETTING_MAIN_WINDOW_SIDEBAR_NAVIGATION, useSidebar);
+
+            if (TabControlHandle)
+            {
+                PhTabNew_SetSide(TabControlHandle, useSidebar ? TNS_LEFT : TNS_TOP);
+                PhTabNew_SetSkin(TabControlHandle, PhTabNewSkinWin11);
+
+                deferHandle = BeginDeferWindowPos(2);
+                PhMwpLayout(&deferHandle);
+                EndDeferWindowPos(deferHandle);
+                InvalidateRect(TabControlHandle, NULL, TRUE);
+            }
         }
         break;
     case ID_OPACITY_10:
@@ -3720,6 +3755,7 @@ PPH_EMENU PhpCreateViewMenu(
     PhInsertEMenuItem(ViewMenu, PhCreateEMenuSeparator(), ULONG_MAX);
     PhInsertEMenuItem(ViewMenu, PhCreateEMenuItem(0, ID_VIEW_SECTIONPLACEHOLDER, L"<section placeholder>", NULL, NULL), ULONG_MAX);
     PhInsertEMenuItem(ViewMenu, PhCreateEMenuSeparator(), ULONG_MAX);
+    PhInsertEMenuItem(ViewMenu, PhCreateEMenuItem(0, ID_VIEW_SIDEBARNAVIGATION, L"Navigation &sidebar (Windows 11)", NULL, NULL), ULONG_MAX);
     PhInsertEMenuItem(ViewMenu, PhCreateEMenuItem(0, ID_VIEW_ALWAYSONTOP, L"&Always on top", NULL, NULL), ULONG_MAX);
 
     menuItem = PhCreateEMenuItem(0, 0, L"&Opacity", NULL, NULL);
@@ -4448,6 +4484,10 @@ VOID PhMwpInitializeSubMenu(
             PhMwpInitializeSectionMenuItems(Menu, placeholderIndex);
         }
 
+        if (PhGetIntegerSetting(SETTING_MAIN_WINDOW_SIDEBAR_NAVIGATION) &&
+            (menuItem = PhFindEMenuItem(Menu, 0, NULL, ID_VIEW_SIDEBARNAVIGATION)))
+            menuItem->Flags |= PH_EMENU_CHECKED;
+
         if (AlwaysOnTop && (menuItem = PhFindEMenuItem(Menu, 0, NULL, ID_VIEW_ALWAYSONTOP)))
             menuItem->Flags |= PH_EMENU_CHECKED;
 
@@ -4666,15 +4706,18 @@ VOID PhMwpLayoutTabControl(
 
     if (CurrentPage && CurrentPage->WindowHandle)
     {
-        // Remove the tabctrl padding (dmex)
+        BOOLEAN topTabs = PhTabNew_GetSide(TabControlHandle) == TNS_TOP;
+        LONG topAdjust = topTabs ? LayoutBorderSize : 0;
+
+        // Remove the tabctrl padding for top tabs; sidebar navigation aligns flush.
         *DeferHandle = DeferWindowPos(
             *DeferHandle,
             CurrentPage->WindowHandle,
             HWND_TOP,
             tabRect.left,
-            tabRect.top - LayoutBorderSize,
+            tabRect.top - topAdjust,
             tabRect.right - tabRect.left,
-            tabRect.bottom - tabRect.top,
+            tabRect.bottom - tabRect.top + topAdjust,
             SWP_NOACTIVATE | SWP_NOZORDER //| SWP_NOOWNERZORDER
             );
     }

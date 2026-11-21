@@ -428,61 +428,61 @@ static CONST PH_WINDOW_THEME_PALETTE PhpWindowThemeDarkPalette =
     RGB(155, 155, 155)  // MenuDisabledTextColor
 };
 
-// Windows 11 File Explorer colors. The Highlight/Focus/border entries are
+// Windows 11 Fluent / File Explorer colors. The Highlight/Focus/border entries are
 // placeholders replaced with accent-derived colors by PhpResolveExplorerPalette
 // when the user's accent color is available.
 static CONST PH_WINDOW_THEME_PALETTE PhpWindowThemeExplorerDarkPalette =
 {
-    RGB(32, 32, 32),    // ForegroundColor
-    RGB(32, 32, 32),    // BackgroundColor
-    RGB(43, 43, 43),    // Background2Color
-    RGB(61, 61, 61),    // HighlightColor
-    RGB(74, 74, 74),    // Highlight2Color
+    RGB(43, 43, 43),    // ForegroundColor (elevated surface / card)
+    RGB(32, 32, 32),    // BackgroundColor (Win11 Mica base canvas)
+    RGB(45, 45, 45),    // Background2Color (subtle control / hover surface)
+    RGB(58, 58, 58),    // HighlightColor
+    RGB(72, 72, 72),    // Highlight2Color
     RGB(255, 255, 255), // TextColor
-    RGB(154, 154, 154), // DisabledTextColor
+    RGB(158, 158, 158), // DisabledTextColor
     RGB(56, 56, 56),    // BorderColor
-    RGB(56, 56, 56),    // PressedColor
+    RGB(52, 52, 52),    // PressedColor
     RGB(45, 45, 45),    // EditColor
     RGB(32, 32, 32),    // ScrollbarColor
     RGB(222, 222, 222), // DropdownGlyphColor
-    RGB(0, 120, 215),   // WindowActiveBorderColor
+    RGB(96, 205, 255),  // WindowActiveBorderColor
     RGB(56, 56, 56),    // WindowInactiveBorderColor
-    RGB(255, 0, 0),     // FilteredBorderColor
-    RGB(255, 128, 0),   // ProtectedBorderColor
-    RGB(0, 120, 215),   // FocusBorderColor
+    RGB(255, 99, 99),   // FilteredBorderColor
+    RGB(255, 160, 48),  // ProtectedBorderColor
+    RGB(96, 205, 255),  // FocusBorderColor (Win11 dark accent default)
     RGB(56, 56, 56),    // GroupBoxFrameColor
     RGB(56, 56, 56),    // WindowFrameColor
-    RGB(0, 120, 215),   // EditHotBorderColor
-    RGB(56, 56, 56),    // EditNormalBorderColor
+    RGB(96, 205, 255),  // EditHotBorderColor
+    RGB(64, 64, 64),    // EditNormalBorderColor
     RGB(255, 255, 255), // MenuSelectedTextColor
-    RGB(154, 154, 154)  // MenuDisabledTextColor
+    RGB(158, 158, 158)  // MenuDisabledTextColor
 };
 
 static CONST PH_WINDOW_THEME_PALETTE PhpWindowThemeExplorerLightPalette =
 {
-    RGB(255, 255, 255), // ForegroundColor
-    RGB(255, 255, 255), // BackgroundColor
-    RGB(243, 243, 243), // Background2Color
-    RGB(217, 217, 217), // HighlightColor
-    RGB(234, 234, 234), // Highlight2Color
-    RGB(0, 0, 0),       // TextColor
-    RGB(109, 109, 109), // DisabledTextColor
+    RGB(255, 255, 255), // ForegroundColor (elevated surface / card)
+    RGB(243, 243, 243), // BackgroundColor (Win11 Mica base canvas)
+    RGB(234, 234, 234), // Background2Color (subtle control / hover surface)
+    RGB(224, 224, 224), // HighlightColor
+    RGB(214, 214, 214), // Highlight2Color
+    RGB(26, 26, 26),    // TextColor
+    RGB(118, 118, 118), // DisabledTextColor
     RGB(229, 229, 229), // BorderColor
-    RGB(234, 234, 234), // PressedColor
+    RGB(224, 224, 224), // PressedColor
     RGB(255, 255, 255), // EditColor
     RGB(243, 243, 243), // ScrollbarColor
     RGB(60, 60, 60),    // DropdownGlyphColor
-    RGB(0, 120, 215),   // WindowActiveBorderColor
-    RGB(229, 229, 229), // WindowInactiveBorderColor
-    RGB(255, 0, 0),     // FilteredBorderColor
-    RGB(255, 128, 0),   // ProtectedBorderColor
-    RGB(0, 120, 215),   // FocusBorderColor
+    RGB(0, 103, 192),   // WindowActiveBorderColor
+    RGB(220, 220, 220), // WindowInactiveBorderColor
+    RGB(210, 40, 40),   // FilteredBorderColor
+    RGB(220, 110, 0),   // ProtectedBorderColor
+    RGB(0, 103, 192),   // FocusBorderColor (Win11 light accent default)
     RGB(229, 229, 229), // GroupBoxFrameColor
-    RGB(229, 229, 229), // WindowFrameColor
-    RGB(0, 120, 215),   // EditHotBorderColor
-    RGB(229, 229, 229), // EditNormalBorderColor
-    RGB(255, 255, 255), // MenuSelectedTextColor
-    RGB(109, 109, 109)  // MenuDisabledTextColor
+    RGB(220, 220, 220), // WindowFrameColor
+    RGB(0, 103, 192),   // EditHotBorderColor
+    RGB(214, 214, 214), // EditNormalBorderColor
+    RGB(26, 26, 26),    // MenuSelectedTextColor
+    RGB(118, 118, 118)  // MenuDisabledTextColor
 };
 
 static PH_WINDOW_THEME_PALETTE PhpWindowThemeExplorerPalette = { 0 };
@@ -808,6 +808,67 @@ const PH_WINDOW_THEME_PALETTE* PhGetWindowThemePalette(
     )
 {
     return &PhpWindowThemeCurrentPalette;
+}
+
+static VOID PhpThemeRoundRectFillAndFrame(
+    _In_ HDC Hdc,
+    _In_ PRECT Rect,
+    _In_ LONG Radius,
+    _In_ COLORREF FillColor,
+    _In_ COLORREF BorderColor
+    )
+{
+    HPEN borderPen;
+    HPEN oldPen;
+    HBRUSH oldBrush;
+
+    borderPen = CreatePen(PS_SOLID, 1, BorderColor);
+    oldPen = borderPen ? SelectPen(Hdc, borderPen) : SelectPen(Hdc, PhGetStockPen(NULL_PEN));
+    SetDCBrushColor(Hdc, FillColor);
+    oldBrush = SelectBrush(Hdc, PhStockDcBrush);
+
+    RoundRect(
+        Hdc,
+        Rect->left,
+        Rect->top,
+        Rect->right,
+        Rect->bottom,
+        Radius * 2,
+        Radius * 2
+        );
+
+    SelectBrush(Hdc, oldBrush);
+    SelectPen(Hdc, oldPen);
+    if (borderPen)
+        DeletePen(borderPen);
+}
+
+static VOID PhpThemeRoundRectFill(
+    _In_ HDC Hdc,
+    _In_ PRECT Rect,
+    _In_ LONG Radius,
+    _In_ COLORREF FillColor
+    )
+{
+    HPEN oldPen;
+    HBRUSH oldBrush;
+
+    oldPen = SelectPen(Hdc, PhGetStockPen(NULL_PEN));
+    SetDCBrushColor(Hdc, FillColor);
+    oldBrush = SelectBrush(Hdc, PhStockDcBrush);
+
+    RoundRect(
+        Hdc,
+        Rect->left,
+        Rect->top,
+        Rect->right,
+        Rect->bottom,
+        Radius * 2,
+        Radius * 2
+        );
+
+    SelectBrush(Hdc, oldBrush);
+    SelectPen(Hdc, oldPen);
 }
 
 static VOID PhpThemeFillRect(
@@ -1155,7 +1216,7 @@ static VOID PhpInitializeWindowTheme(
 
                 if (SetPreferredAppMode_I)
                 {
-                    SetPreferredAppMode_I(PreferredAppModeDarkAlways);
+                    SetPreferredAppMode_I(PhThemeWindowUseDarkBackground() ? PreferredAppModeDarkAlways : PreferredAppModeDarkOnDark);
                 }
 
                 if (FlushMenuThemes_I)
@@ -1727,6 +1788,9 @@ VOID PhReInitializeWindowTheme(
 #ifndef DWMWA_CAPTION_COLOR
 #define DWMWA_CAPTION_COLOR 35
 #endif
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+#endif
 #ifndef DWMWA_BORDER_COLOR
 #define DWMWA_BORDER_COLOR 34
 #endif
@@ -1903,10 +1967,10 @@ VOID PhInitializeThemeWindowFrame(
 
         if (PhEnableThemeSupport)
         {
-            // The Explorer theme follows the system light/dark preference and lets
-            // DWM draw the caption so the Mica backdrop shows through.
+            // Follow the active palette's light/dark polarity so Light, Dark,
+            // Automatic, and Windows 11 Explorer modes all get matching titlebars.
             BOOLEAN explorerTheme = PhpWindowThemeCurrentId == PhWindowThemeExplorer;
-            BOOLEAN darkMode = !explorerTheme || PhQueryWindowsUseDarkMode();
+            BOOLEAN darkMode = PhThemeWindowUseDarkBackground();
 
             PhAllowDarkModeForWindow(WindowHandle, darkMode);
             PhSetControlTheme(WindowHandle, darkMode ? L"DarkMode_Explorer" : L"Explorer");
@@ -1920,8 +1984,10 @@ VOID PhInitializeThemeWindowFrame(
 
             if (WindowsVersion >= WINDOWS_11)
             {
+                ULONG cornerPreference = 2; // DWMWCP_ROUND
                 COLORREF captionColor = explorerTheme ? DWMWA_COLOR_DEFAULT : PhThemeWindowBackgroundColor;
 
+                PhSetWindowThemeAttribute(WindowHandle, DWMWA_WINDOW_CORNER_PREFERENCE, &cornerPreference, sizeof(ULONG));
                 PhSetWindowThemeAttribute(WindowHandle, DWMWA_CAPTION_COLOR, &captionColor, sizeof(COLORREF));
             }
         }
@@ -1973,37 +2039,13 @@ VOID PhWindowThemeSetDarkMode(
     _In_ BOOLEAN EnableDarkMode
     )
 {
-    //BOOL boolAttribute;
-
-    if (EnableDarkMode && PhEnableThemeSupport) // ShouldAppsUseDarkMode_I()
+    if (EnableDarkMode && PhEnableThemeSupport && PhThemeWindowUseDarkBackground())
     {
         PhSetControlTheme(WindowHandle, L"DarkMode_Explorer");
-        //PhSetControlTheme(WindowHandle, L"DarkMode_ItemsView");
-
-        //if (WindowsVersion >= WINDOWS_11)
-        //{
-        //    boolAttribute = TRUE;
-        //
-        //    if (FAILED(PhSetWindowThemeAttribute(WindowHandle, DWMWA_USE_IMMERSIVE_DARK_MODE, &boolAttribute, sizeof(BOOL))))
-        //    {
-        //        PhSetWindowThemeAttribute(WindowHandle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, &boolAttribute, sizeof(BOOL));
-        //    }
-        //}
     }
     else
     {
         PhSetControlTheme(WindowHandle, L"Explorer");
-        //PhSetControlTheme(WindowHandle, L"ItemsView");
-
-        //if (WindowsVersion >= WINDOWS_11)
-        //{
-        //    boolAttribute = FALSE;
-        //
-        //    if (FAILED(PhSetWindowThemeAttribute(WindowHandle, DWMWA_USE_IMMERSIVE_DARK_MODE, &boolAttribute, sizeof(BOOL))))
-        //    {
-        //        PhSetWindowThemeAttribute(WindowHandle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, &boolAttribute, sizeof(BOOL));
-        //    }
-        //}
     }
 }
 
@@ -2741,14 +2783,15 @@ VOID PhpApplyThemeWindow(
     }
     else if (PhEqualStringZ(windowClassName, WC_LISTVIEW, FALSE))
     {
-        if (WindowsVersion >= WINDOWS_10_RS5)
-        {
-            HWND tooltipWindow = ListView_GetToolTips(WindowHandle);
+            if (WindowsVersion >= WINDOWS_10_RS5)
+            {
+                BOOLEAN darkMode = PhThemeWindowUseDarkBackground();
+                HWND tooltipWindow = ListView_GetToolTips(WindowHandle);
 
-            PhAllowDarkModeForWindow(WindowHandle, TRUE);
-            PhSetControlTheme(WindowHandle, L"DarkMode_ItemsView");
-            PhWindowThemeSetDarkMode(tooltipWindow, TRUE);
-        }
+                PhAllowDarkModeForWindow(WindowHandle, darkMode);
+                PhSetControlTheme(WindowHandle, darkMode ? L"DarkMode_ItemsView" : L"ItemsView");
+                PhWindowThemeSetDarkMode(tooltipWindow, darkMode);
+            }
 
         if (PhEnableThemeListviewBorder)
         {
@@ -2824,19 +2867,20 @@ VOID PhpApplyThemeWindow(
         // anything they painted in the meantime has to be invalidated as well.
         if (WindowsVersion >= WINDOWS_10_RS5)
         {
+            BOOLEAN darkMode = PhThemeWindowUseDarkBackground();
             HWND headerWindow;
 
             if (headerWindow = TreeNew_GetFixedHeader(WindowHandle))
             {
-                PhAllowDarkModeForWindow(headerWindow, TRUE);
-                PhSetControlTheme(headerWindow, L"DarkMode_ItemsView");
+                PhAllowDarkModeForWindow(headerWindow, darkMode);
+                PhSetControlTheme(headerWindow, darkMode ? L"DarkMode_ItemsView" : L"ItemsView");
                 InvalidateRect(headerWindow, NULL, FALSE);
             }
 
             if (headerWindow = TreeNew_GetHeader(WindowHandle))
             {
-                PhAllowDarkModeForWindow(headerWindow, TRUE);
-                PhSetControlTheme(headerWindow, L"DarkMode_ItemsView");
+                PhAllowDarkModeForWindow(headerWindow, darkMode);
+                PhSetControlTheme(headerWindow, darkMode ? L"DarkMode_ItemsView" : L"ItemsView");
                 InvalidateRect(headerWindow, NULL, FALSE);
             }
         }
@@ -3009,27 +3053,31 @@ BOOLEAN PhThemeWindowDrawItem(
             //    );
             //SetTextColor(DrawInfo->hDC, RGB(0xff, 0xff, 0xff));
 
-            if (DrawInfo->itemState & ODS_HOTLIGHT)
+            // Modern Windows 11 rounded pill menu item highlight.
+            FillRect(DrawInfo->hDC, &DrawInfo->rcItem, PhThemeWindowBackgroundBrush);
+
+            if ((DrawInfo->itemState & ODS_HOTLIGHT) || (isSelected && !isDisabled))
             {
+                RECT pillRect = DrawInfo->rcItem;
+                LONG insetX = PhScaleToDisplay(4, dpiValue);
+                LONG insetY = PhScaleToDisplay(1, dpiValue);
+                LONG radius = PhScaleToDisplay(4, dpiValue);
+
+                pillRect.left += insetX;
+                pillRect.right -= insetX;
+                pillRect.top += insetY;
+                pillRect.bottom -= insetY;
+
                 SetTextColor(DrawInfo->hDC, PhThemeWindowTextColor);
-                SetDCBrushColor(DrawInfo->hDC, PhThemeWindowHighlightColor);
-                FillRect(DrawInfo->hDC, &DrawInfo->rcItem, PhStockDcBrush);
+                PhpThemeRoundRectFill(DrawInfo->hDC, &pillRect, radius, PhThemeWindowHighlightColor);
             }
             else if (isDisabled)
             {
                 SetTextColor(DrawInfo->hDC, PhThemeWindowMenuDisabledTextColor);
-                FillRect(DrawInfo->hDC, &DrawInfo->rcItem, PhThemeWindowBackgroundBrush);
-            }
-            else if (isSelected)
-            {
-                SetTextColor(DrawInfo->hDC, PhThemeWindowTextColor);
-                SetDCBrushColor(DrawInfo->hDC, PhThemeWindowHighlightColor);
-                FillRect(DrawInfo->hDC, &DrawInfo->rcItem, PhStockDcBrush);
             }
             else
             {
-                SetTextColor(DrawInfo->hDC, PhThemeWindowMenuSelectedTextColor);
-                FillRect(DrawInfo->hDC, &DrawInfo->rcItem, PhThemeWindowBackgroundBrush);
+                SetTextColor(DrawInfo->hDC, PhThemeWindowTextColor);
             }
 
             if (isChecked)
@@ -3322,8 +3370,8 @@ BOOLEAN PhThemeWindowMeasureItem(
                 {
                     if (GetTextExtentPoint32(hdc, text, (ULONG)textCount, &textSize))
                     {
-                        DrawInfo->itemWidth = textSize.cx + (cyborder * 2) + PhScaleToDisplay(90, dpiValue); // HACK
-                        DrawInfo->itemHeight = cymenu + (cyborder * 2) + PhScaleToDisplay(1, dpiValue);
+                        DrawInfo->itemWidth = textSize.cx + (cyborder * 2) + PhScaleToDisplay(96, dpiValue); // HACK
+                        DrawInfo->itemHeight = cymenu + (cyborder * 2) + PhScaleToDisplay(6, dpiValue);
                     }
                 }
 
@@ -3787,25 +3835,33 @@ LRESULT CALLBACK PhThemeWindowDrawButton(
             }
             else
             {
+                LONG radius = PhScaleToDisplay(4, dpiValue);
+                COLORREF fillColor;
+                COLORREF borderColor;
+
+                FillRect(DrawInfo->hdc, &DrawInfo->rc, PhThemeWindowBackgroundBrush);
+
                 if (isSelected)
                 {
                     SetTextColor(DrawInfo->hdc, PhThemeWindowTextColor);
-                    PhpThemeFillRect(DrawInfo->hdc, &DrawInfo->rc, PHP_THEME_WINDOW_PRESSED_COLOR);
+                    fillColor = PHP_THEME_WINDOW_PRESSED_COLOR;
+                    borderColor = isFocused ? PhThemeWindowFocusBorderColor : PhThemeWindowBorderColor;
                 }
                 else if (isHighlighted)
                 {
                     SetTextColor(DrawInfo->hdc, PhThemeWindowTextColor);
-                    PhpThemeFillRect(DrawInfo->hdc, &DrawInfo->rc, PhThemeWindowBackground2Color);
+                    fillColor = PhThemeWindowBackground2Color;
+                    borderColor = isFocused ? PhThemeWindowFocusBorderColor : PhThemeWindowHighlight2Color;
                 }
                 else
                 {
                     SetTextColor(DrawInfo->hdc, !isDisabled ? PhThemeWindowTextColor : PHP_THEME_WINDOW_DISABLED_TEXT_COLOR);
-                    //SetDCBrushColor(DrawInfo->hdc, PhThemeWindowBackgroundColor); // WindowForegroundColor
-                    FillRect(DrawInfo->hdc, &DrawInfo->rc, PhThemeWindowBackgroundBrush);
+                    fillColor = PhThemeWindowUseDarkBackground() ? PhThemeWindowForegroundColor : PhThemeWindowForegroundColor;
+                    borderColor = isFocused ? PhThemeWindowFocusBorderColor : PhThemeWindowBorderColor;
                 }
 
                 SetBkMode(DrawInfo->hdc, TRANSPARENT);
-                PhpThemeFrameRect(DrawInfo->hdc, &DrawInfo->rc, !isFocused ? PhThemeWindowBackground2Color : PhThemeWindowHighlightColor);
+                PhpThemeRoundRectFillAndFrame(DrawInfo->hdc, &DrawInfo->rc, radius, fillColor, borderColor);
 
                 PhThemeDrawButtonIcon(DrawInfo, buttonIcon, &bufferRect, dpiValue);
 
@@ -3911,34 +3967,33 @@ LRESULT CALLBACK PhThemeWindowDrawToolbar(
                 isEnabled ? PhThemeWindowTextColor : PHP_THEME_WINDOW_DISABLED_TEXT_COLOR
                 );
 
-            if (isPressed)
-            {
-                // click: mouse currently held down
-                PhpThemeFillRect(DrawInfo->nmcd.hdc, &DrawInfo->nmcd.rc, PHP_THEME_WINDOW_PRESSED_COLOR);
-            }
-            else if (isChecked)
-            {
-                // active / latched: reuse pressed color; brighten when also hovered
-                PhpThemeFillRect(
-                    DrawInfo->nmcd.hdc,
-                    &DrawInfo->nmcd.rc,
-                    isHighlighted ? PhThemeWindowHighlight2Color : PHP_THEME_WINDOW_PRESSED_COLOR
-                    );
-            }
-            else if (isHighlighted)
-            {
-                // hover
-                SetDCBrushColor(DrawInfo->nmcd.hdc, PhThemeWindowHighlightColor);
-                FillRect(DrawInfo->nmcd.hdc, &DrawInfo->nmcd.rc, PhStockDcBrush);
-            }
-            else
-            {
-                // normal
-                FillRect(DrawInfo->nmcd.hdc, &DrawInfo->nmcd.rc, PhThemeWindowBackgroundBrush);
-            }
-
             dpiValue = PhGetWindowDpi(DrawInfo->nmcd.hdr.hwndFrom);
             edgeWidth = PhGetSystemMetrics(SM_CXEDGE, dpiValue);
+
+            FillRect(DrawInfo->nmcd.hdc, &DrawInfo->nmcd.rc, PhThemeWindowBackgroundBrush);
+
+            if (isPressed || isChecked || isHighlighted)
+            {
+                RECT pillRect = DrawInfo->nmcd.rc;
+                LONG insetX = PhScaleToDisplay(2, dpiValue);
+                LONG insetY = PhScaleToDisplay(2, dpiValue);
+                LONG radius = PhScaleToDisplay(4, dpiValue);
+                COLORREF pillColor;
+
+                pillRect.left += insetX;
+                pillRect.right -= insetX;
+                pillRect.top += insetY;
+                pillRect.bottom -= insetY;
+
+                if (isPressed)
+                    pillColor = PHP_THEME_WINDOW_PRESSED_COLOR;
+                else if (isChecked)
+                    pillColor = isHighlighted ? PhThemeWindowHighlight2Color : PHP_THEME_WINDOW_PRESSED_COLOR;
+                else
+                    pillColor = PhThemeWindowBackground2Color;
+
+                PhpThemeRoundRectFill(DrawInfo->nmcd.hdc, &pillRect, radius, pillColor);
+            }
 
             SelectFont(DrawInfo->nmcd.hdc, GetWindowFont(DrawInfo->nmcd.hdr.hwndFrom));
 
@@ -4458,12 +4513,15 @@ VOID ThemeWindowRenderClippedGroupBoxControl(
 
         frameRect.top += textSize.cy / 2;
 
-        framePen = CreatePen(PS_SOLID, 1, PhThemeWindowBackground2Color);
+        framePen = CreatePen(PS_SOLID, 1, PhThemeWindowGroupBoxFrameColor);
         oldPen = framePen ? SelectPen(BufferDc, framePen) : NULL;
         oldBrush = SelectBrush(BufferDc, PhStockNullBrush);
 
         if (framePen)
-            Rectangle(BufferDc, frameRect.left, frameRect.top, frameRect.right, frameRect.bottom);
+        {
+            LONG radius = PhScaleToDisplay(6, dpiValue);
+            RoundRect(BufferDc, frameRect.left, frameRect.top, frameRect.right, frameRect.bottom, radius * 2, radius * 2);
+        }
 
         if (oldBrush)
             SelectBrush(BufferDc, oldBrush);
@@ -4632,7 +4690,10 @@ LRESULT CALLBACK PhThemeWindowGroupBoxExSubclassProc(
             oldPen = SelectPen(memoryDc, framePen);
             oldBrush = SelectBrush(memoryDc, PhGetStockObject(NULL_BRUSH));
 
-            Rectangle(memoryDc, frameRect.left, frameRect.top, frameRect.right, frameRect.bottom);
+            {
+                LONG radius = PhScaleToDisplay(6, PhGetWindowDpi(WindowHandle));
+                RoundRect(memoryDc, frameRect.left, frameRect.top, frameRect.right, frameRect.bottom, radius * 2, radius * 2);
+            }
 
             SelectBrush(memoryDc, oldBrush);
             SelectPen(memoryDc, oldPen);
@@ -4689,17 +4750,19 @@ VOID ThemeWindowRenderProgressBarControl(
     INT state;
     RECT fillRect;
     COLORREF fillColor;
-    LONG borderSize;
+    LONG dpiValue;
+    LONG radius;
 
     style = PhGetWindowStyle(WindowHandle);
+    dpiValue = PhGetWindowDpi(WindowHandle);
+    radius = PhScaleToDisplay(4, dpiValue);
 
     SetBkMode(BufferDc, TRANSPARENT);
-    SetDCBrushColor(BufferDc, PhThemeWindowBackground2Color);
-    FillRect(BufferDc, ClientRect, PhStockDcBrush);
+    FillRect(BufferDc, ClientRect, PhThemeWindowBackgroundBrush);
+    PhpThemeRoundRectFillAndFrame(BufferDc, ClientRect, radius, PhThemeWindowBackground2Color, PhThemeWindowBorderColor);
 
-    borderSize = 1;
     fillRect = *ClientRect;
-    InflateRect(&fillRect, -borderSize, -borderSize);
+    InflateRect(&fillRect, -1, -1);
 
     state = (INT)SendMessage(WindowHandle, PBM_GETSTATE, 0, 0);
 
@@ -4712,16 +4775,13 @@ VOID ThemeWindowRenderProgressBarControl(
         fillColor = RGB(230, 180, 40);
         break;
     default:
-        fillColor = PhThemeWindowHighlightColor;
+        fillColor = PhThemeWindowFocusBorderColor;
         break;
     }
 
     if (style & PBS_MARQUEE)
     {
-        // Marquee mode animates via the control's own timer/PBM_SETMARQUEE;
-        // draw a static highlighted bar since we own WM_PAINT entirely.
-        SetDCBrushColor(BufferDc, fillColor);
-        FillRect(BufferDc, &fillRect, PhStockDcBrush);
+        PhpThemeRoundRectFill(BufferDc, &fillRect, radius, fillColor);
     }
     else
     {
@@ -4743,14 +4803,10 @@ VOID ThemeWindowRenderProgressBarControl(
 
             if (barRect.right > barRect.left)
             {
-                SetDCBrushColor(BufferDc, fillColor);
-                FillRect(BufferDc, &barRect, PhStockDcBrush);
+                PhpThemeRoundRectFill(BufferDc, &barRect, radius, fillColor);
             }
         }
     }
-
-    SetDCBrushColor(BufferDc, PhThemeWindowBorderColor);
-    FrameRect(BufferDc, ClientRect, PhStockDcBrush);
 }
 
 LRESULT CALLBACK PhpThemeWindowProgressBarSubclassProc(
@@ -5419,19 +5475,17 @@ VOID ThemeWindowRenderComboBox(
     SetBkMode(bufferDc, TRANSPARENT);
     fontHandle = (HFONT)CallWindowProc(WindowProcedure, WindowHandle, WM_GETFONT, 0, 0);
     oldFont = SelectFont(bufferDc, fontHandle ? fontHandle : PhGetStockObject(DEFAULT_GUI_FONT));
-    PhpThemeFillRect(bufferDc, clientRect, PhThemeWindowBackground2Color);
 
-    if (PhPtInRect(clientRect, &Context->CursorPos))
     {
-        SetDCBrushColor(bufferDc, PhThemeWindowHighlight2Color);
-    }
-    else
-    {
-        SetDCBrushColor(bufferDc, PhThemeWindowWindowFrameColor);
+        LONG radius = PhScaleToDisplay(4, Context->WindowDpi);
+        COLORREF borderColor = PhPtInRect(clientRect, &Context->CursorPos) ? PhThemeWindowHighlight2Color : PhThemeWindowBorderColor;
+        COLORREF fillColor = PhThemeWindowUseDarkBackground() ? PhThemeWindowEditColor : PhThemeWindowForegroundColor;
+
+        FillRect(bufferDc, clientRect, PhThemeWindowBackgroundBrush);
+        PhpThemeRoundRectFillAndFrame(bufferDc, clientRect, radius, fillColor, borderColor);
     }
 
     SetTextColor(bufferDc, PhThemeWindowTextColor);
-    FrameRect(bufferDc, clientRect, PhStockDcBrush);
 
     if (Context->ThemeHandle)
     {
@@ -5741,19 +5795,24 @@ VOID PhTheme_PaintControlBorder(
     // so this cannot bleed into client pixels.
     //FillRect(Hdc, Rect, PhThemeWindowBackgroundBrush);
 
-    // Draw outer border (1px)
+    // Draw outer hairline border (1px)
     SetDCBrushColor(Hdc, outerColor);
     FrameRect(Hdc, Rect, PhStockDcBrush);
 
-    // Draw inner border (1px) if space remains. The inner line sits directly
-    // inside the outer line so both fit within the reserved WS_EX_CLIENTEDGE band.
+    // Draw inner border (1px) to match the edit surface.
     RECT rcInner = *Rect;
     PhInflateRect(&rcInner, -1, -1);
-    //if (rcInner.right > rcInner.left && rcInner.bottom > rcInner.top)
-    //{
-        SetDCBrushColor(Hdc, PhEnableThemeSupport ? PHP_THEME_WINDOW_EDIT_COLOR : PhThemeWindowBackgroundColor);
-        FrameRect(Hdc, &rcInner, PhStockDcBrush);
-    //}
+    SetDCBrushColor(Hdc, PhEnableThemeSupport ? PHP_THEME_WINDOW_EDIT_COLOR : PhThemeWindowBackgroundColor);
+    FrameRect(Hdc, &rcInner, PhStockDcBrush);
+
+    // WinUI 3 bottom accent underline when focused.
+    if (Focused && PhEnableThemeSupport)
+    {
+        RECT bottomAccent = *Rect;
+        bottomAccent.top = bottomAccent.bottom - 2;
+        SetDCBrushColor(Hdc, PhThemeWindowFocusBorderColor);
+        FillRect(Hdc, &bottomAccent, PhStockDcBrush);
+    }
 }
 
 VOID PhpThemeWindowEditThemeChanged(

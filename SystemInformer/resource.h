@@ -1025,6 +1025,7 @@
 #define ID_MENUBAR_PAUSE                10334
 #define ID_MENUBAR_DRIVERSTATUS         10335
 #define ID_MENUBAR_ELEVATE              10336
+#define ID_VIEW_SIDEBARNAVIGATION       10356
 
 #define IDD_THRDSHADOWSTACK             298
 #define IDC_GRAPHSTYLESTATUS            1571

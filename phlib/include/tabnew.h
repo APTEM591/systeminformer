@@ -47,7 +47,8 @@ typedef enum _PH_TABNEW_SKIN
 {
     PhTabNewSkinWin7 = 0,    // Aero-style replica (custom-painted)
     PhTabNewSkinWin10 = 1,   // flat with accent underline
-    PhTabNewSkinUxTheme = 2  // native OpenThemeData(L"Tab") (default)
+    PhTabNewSkinUxTheme = 2, // native OpenThemeData(L"Tab")
+    PhTabNewSkinWin11 = 3    // Windows 11 Fluent NavigationView / rounded pill tabs
 } PH_TABNEW_SKIN;
 
 // Hit-test flags

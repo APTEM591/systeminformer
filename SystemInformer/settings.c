@@ -77,8 +77,8 @@ VOID PhAddDefaultSettings(
     PhpAddIntegerSetting(SETTING_ENABLE_SHUTDOWN_CRITICAL_MENU, L"0");
     PhpAddIntegerSetting(SETTING_ENABLE_SHUTDOWN_BOOT_MENU, L"1");
     PhpAddIntegerSetting(SETTING_ENABLE_SILENT_CRASH_NOTIFY, L"0");
-    PhpAddIntegerSetting(SETTING_ENABLE_THEME_SUPPORT, L"0");
-    PhpAddIntegerSetting(SETTING_THEME_MODE, L"0"); // PhThemeModeAutomatic
+    PhpAddIntegerSetting(SETTING_ENABLE_THEME_SUPPORT, L"1");
+    PhpAddIntegerSetting(SETTING_THEME_MODE, L"4"); // PhThemeModeExplorer (Windows 11 Fluent)
     PhpAddIntegerSetting(SETTING_ENABLE_THEME_ACRYLIC_SUPPORT, L"0");
     PhpAddIntegerSetting(SETTING_ENABLE_THEME_ACRYLIC_WINDOW_SUPPORT, L"0");
     PhpAddIntegerSetting(SETTING_ENABLE_THEME_ANIMATION, L"1");
@@ -193,8 +193,9 @@ VOID PhAddDefaultSettings(
     PhpAddStringSetting(SETTING_MAIN_WINDOW_CLASS_NAME, L"MainWindowClassName");
     PhpAddIntegerSetting(SETTING_MAIN_WINDOW_OPACITY, L"0"); // means 100%
     PhpAddIntegerPairSetting(SETTING_MAIN_WINDOW_POSITION, L"100,100");
-    PhpAddScalableIntegerPairSetting(SETTING_MAIN_WINDOW_SIZE, L"@96|800,600");
+    PhpAddScalableIntegerPairSetting(SETTING_MAIN_WINDOW_SIZE, L"@96|1050,680");
     PhpAddIntegerSetting(SETTING_MAIN_WINDOW_STATE, L"1");
+    PhpAddIntegerSetting(SETTING_MAIN_WINDOW_SIDEBAR_NAVIGATION, L"1");
     PhpAddStringSetting(SETTING_MAIN_WINDOW_TAB_LAYOUT, L"");
     PhpAddIntegerSetting(SETTING_MAIN_WINDOW_TAB_RESTORE_ENABLED, L"0");
     PhpAddStringSetting(SETTING_MAIN_WINDOW_TAB_RESTORE_NAME, L"");

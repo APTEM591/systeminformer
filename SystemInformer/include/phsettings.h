@@ -392,6 +392,7 @@ EXT ULONG PhCsProcessMonitorCacheLimit;
 #define SETTING_MAIN_WINDOW_POSITION                                L"MainWindowPosition"
 #define SETTING_MAIN_WINDOW_SIZE                                    L"MainWindowSize"
 #define SETTING_MAIN_WINDOW_STATE                                   L"MainWindowState"
+#define SETTING_MAIN_WINDOW_SIDEBAR_NAVIGATION                      L"MainWindowSidebarNavigation"
 #define SETTING_MAIN_WINDOW_TAB_LAYOUT                              L"MainWindowTabLayout"
 #define SETTING_MAIN_WINDOW_TAB_RESTORE_ENABLED                     L"MainWindowTabRestoreEnabled"
 #define SETTING_MAIN_WINDOW_TAB_RESTORE_NAME                        L"MainWindowTabRestoreName"

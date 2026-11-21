@@ -4454,6 +4454,7 @@ INT_PTR CALLBACK PhpOptionsThemesDlgProc(
             ComboBox_AddString(comboHandle, L"Light");
             ComboBox_AddString(comboHandle, L"Dark");
             ComboBox_AddString(comboHandle, L"Custom");
+            ComboBox_AddString(comboHandle, L"Windows 11 (Fluent)");
             ComboBox_SetCurSel(comboHandle, PhGetIntegerSetting(SETTING_THEME_MODE));
             EnableWindow(comboHandle, PhGetIntegerSetting(SETTING_ENABLE_THEME_SUPPORT) != 0);
         }

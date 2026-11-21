@@ -596,22 +596,60 @@ VOID ThemeWindowStatusBarDrawPart(
     if (Index == Context->HotIndex)
     {
         SetTextColor(bufferDc, PhThemeWindowTextColor);
-        SetDCBrushColor(bufferDc, PhThemeWindowHighlightColor);
-        blockRect.left -= 3, blockRect.top -= 1;
-        FillRect(bufferDc, &blockRect, PhGetStockBrush(DC_BRUSH));
-        blockRect.left += 3, blockRect.top += 1;
+        FillRect(bufferDc, &blockRect, PhThemeWindowBackgroundBrush);
+
+        if (WindowsVersion >= WINDOWS_11)
+        {
+            RECT pillRect = blockRect;
+            LONG radius = PhScaleToDisplay(4, Context->WindowDpi);
+            LONG inset = PhScaleToDisplay(2, Context->WindowDpi);
+            HBRUSH oldBrush;
+            HPEN oldPen;
+
+            PhInflateRect(&pillRect, -inset, -inset);
+
+            if (pillRect.right > pillRect.left && pillRect.bottom > pillRect.top)
+            {
+                SetDCBrushColor(bufferDc, PhThemeWindowBackground2Color);
+                oldBrush = SelectBrush(bufferDc, PhGetStockBrush(DC_BRUSH));
+                oldPen = SelectPen(bufferDc, GetStockPen(NULL_PEN));
+                RoundRect(
+                    bufferDc,
+                    pillRect.left,
+                    pillRect.top,
+                    pillRect.right + 1,
+                    pillRect.bottom + 1,
+                    radius * 2,
+                    radius * 2
+                    );
+                SelectPen(bufferDc, oldPen);
+                SelectBrush(bufferDc, oldBrush);
+            }
+        }
+        else
+        {
+            SetDCBrushColor(bufferDc, PhThemeWindowHighlightColor);
+            blockRect.left -= 3, blockRect.top -= 1;
+            FillRect(bufferDc, &blockRect, PhGetStockBrush(DC_BRUSH));
+            blockRect.left += 3, blockRect.top += 1;
+        }
     }
     else
     {
         RECT separator;
+        LONG inset = WindowsVersion >= WINDOWS_11 ? PhScaleToDisplay(4, Context->WindowDpi) : 1;
+
         SetTextColor(bufferDc, PhThemeWindowTextColor);
         FillRect(bufferDc, &blockRect, PhThemeWindowBackgroundBrush);
 
         separator = blockRect;
         separator.left = separator.right - 1;
-        PhInflateRect(&separator, 0, -1);
-        SetDCBrushColor(bufferDc, PhThemeWindowHighlightColor);
-        FillRect(bufferDc, &separator, PhGetStockBrush(DC_BRUSH));
+        PhInflateRect(&separator, 0, -inset);
+        if (separator.bottom > separator.top)
+        {
+            SetDCBrushColor(bufferDc, WindowsVersion >= WINDOWS_11 ? PhThemeWindowBorderColor : PhThemeWindowHighlightColor);
+            FillRect(bufferDc, &separator, PhGetStockBrush(DC_BRUSH));
+        }
     }
 
     if (textStyle & SBT_OWNERDRAW)
@@ -767,8 +805,13 @@ VOID ThemeWindowRenderStatusBar(
     _In_ PRECT clientRect
     )
 {
+    HFONT windowFont;
+    HFONT oldFont = NULL;
+
     SetBkMode(bufferDc, TRANSPARENT);
-    //SelectFont(bufferDc, GetWindowFont(WindowHandle));
+    windowFont = GetWindowFont(WindowHandle);
+    if (windowFont)
+        oldFont = SelectFont(bufferDc, windowFont);
 
     FillRect(bufferDc, clientRect, PhThemeWindowBackgroundBrush);
 
@@ -783,11 +826,17 @@ VOID ThemeWindowRenderStatusBar(
     //
     //if (index == UINT_MAX)
     {
-        // Top statusbar border will be drawn by bottom tabcontrol border
-
         for (LONG i = 0; i < blockCount; i++)
         {
             ThemeWindowStatusBarDrawPart(Context, WindowHandle, bufferDc, clientRect, i);
+        }
+
+        if (WindowsVersion >= WINDOWS_11)
+        {
+            RECT topBorder = *clientRect;
+            topBorder.bottom = topBorder.top + 1;
+            SetDCBrushColor(bufferDc, PhThemeWindowBorderColor);
+            FillRect(bufferDc, &topBorder, PhGetStockBrush(DC_BRUSH));
         }
 
         // Draw the gripper last: the final part extends underneath it.
@@ -819,6 +868,9 @@ VOID ThemeWindowRenderStatusBar(
     //{
     //    ThemeWindowStatusBarDrawPart(Context, WindowHandle, bufferDc, clientRect, WindowProcedure, index);
     //}
+
+    if (oldFont)
+        SelectFont(bufferDc, oldFont);
 }
 
 /**

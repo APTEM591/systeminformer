@@ -290,6 +290,12 @@ VOID PhDestroyTabNewContext(
     if (Context->Font && Context->OwnFont)
         DeleteFont(Context->Font);
 
+    if (Context->IconFont)
+    {
+        DeleteFont(Context->IconFont);
+        Context->IconFont = NULL;
+    }
+
     if (Context->ThemeHandle)
         PhCloseThemeData(Context->ThemeHandle);
 
@@ -488,6 +494,29 @@ VOID PhTabNewUpdateFont(
 {
     HFONT newFont;
 
+    if (Context->IconFont)
+    {
+        DeleteFont(Context->IconFont);
+        Context->IconFont = NULL;
+    }
+
+    Context->IconFont = CreateFont(
+        -PhScaleToDisplay(15, Context->WindowDpi),
+        0,
+        0,
+        0,
+        FW_NORMAL,
+        FALSE,
+        FALSE,
+        FALSE,
+        DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_NATURAL_QUALITY,
+        DEFAULT_PITCH,
+        WindowsVersion >= WINDOWS_11 ? L"Segoe Fluent Icons" : L"Segoe MDL2 Assets"
+        );
+
     if (Context->Font && !Context->OwnFont)
         return;
 
@@ -565,6 +594,15 @@ LONG PhMeasureTabHeight(
     }
 
     height = tm.tmHeight + Context->PaddingY * 2;
+
+    if (Context->Skin == PhTabNewSkinWin11)
+    {
+        BOOLEAN vertical = (Context->Side == TNS_LEFT || Context->Side == TNS_RIGHT);
+        LONG minWin11Height = PhScaleToDisplay(vertical ? 38 : 34, Context->WindowDpi);
+
+        if (height < minWin11Height)
+            height = minWin11Height;
+    }
 
     return height;
 }
@@ -684,7 +722,7 @@ VOID PhTabNewComputeRows(
     )
 {
     ULONG i;
-    LONG cursor = 0;
+    LONG cursor = (vertical && Context->Skin == PhTabNewSkinWin11) ? PhScaleToDisplay(6, Context->WindowDpi) : 0;
     LONG row = 0;
     LONG stripExtent = vertical ? (LONG)(ClientRect->bottom - ClientRect->top)
                                 : (LONG)(ClientRect->right - ClientRect->left);
@@ -707,6 +745,10 @@ VOID PhTabNewComputeRows(
         else
         {
             LONG itemWidth = fixedTabWidth ? fixedTabWidth : PhMeasureTabWidth(Context, NULL, item);
+            if (Context->Skin == PhTabNewSkinWin11)
+            {
+                itemWidth += PhScaleToDisplay(14, Context->WindowDpi);
+            }
             itemExtent = itemWidth;
 
             if (cursor > 0 && cursor + itemExtent > stripExtent)
@@ -843,10 +885,16 @@ VOID PhTabNewComputeStripThickness(
     if (vertical)
     {
         LONG maxWidth = Context->MinTabWidth;
+        LONG win11Extra = (Context->Skin == PhTabNewSkinWin11) ? PhScaleToDisplay(38, Context->WindowDpi) : 0;
+        LONG win11MinWidth = (Context->Skin == PhTabNewSkinWin11) ? PhScaleToDisplay(168, Context->WindowDpi) : 0;
+
+        if (maxWidth < win11MinWidth)
+            maxWidth = win11MinWidth;
+
         for (i = 0; i < Context->Items->Count; i++)
         {
             PPH_TABNEW_INTERNAL_ITEM item = Context->Items->Items[i];
-            LONG w = PhMeasureTabWidth(Context, Hdc, item);
+            LONG w = PhMeasureTabWidth(Context, Hdc, item) + win11Extra;
             if (w > maxWidth) maxWidth = w;
         }
         Context->StripThickness = maxWidth;
@@ -1759,6 +1807,17 @@ COLORREF PhTabNewBackgroundColor(
     _In_ PPH_TABNEW_CONTEXT Context
     )
 {
+    if (PhEnableThemeSupport)
+    {
+        if (Context->Skin == PhTabNewSkinWin11)
+            return PhThemeWindowBackgroundColor;
+
+        if (Context->ThemeDark)
+            return PhThemeWindowBackground2Color;
+
+        return PhThemeWindowBackgroundColor;
+    }
+
     if (Context->ThemeDark)
         return PhThemeWindowBackground2Color;
     return GetSysColor(COLOR_BTNFACE);
@@ -1774,6 +1833,17 @@ COLORREF PhTabNewActiveColor(
     _In_ PPH_TABNEW_CONTEXT Context
     )
 {
+    if (PhEnableThemeSupport)
+    {
+        if (Context->Skin == PhTabNewSkinWin11)
+            return Context->ThemeDark ? PhThemeWindowBackground2Color : PhThemeWindowForegroundColor;
+
+        if (Context->ThemeDark)
+            return PhThemeWindowBackgroundColor;
+
+        return PhThemeWindowForegroundColor;
+    }
+
     if (Context->ThemeDark)
         return PhThemeWindowBackgroundColor;
     return PhTabNewBackgroundColor(Context);
@@ -1789,6 +1859,8 @@ COLORREF PhTabNewTextColor(
     _In_ PPH_TABNEW_CONTEXT Context
     )
 {
+    if (PhEnableThemeSupport)
+        return PhThemeWindowTextColor;
     if (Context->ThemeDark)
         return PhThemeWindowTextColor;
     return GetSysColor(COLOR_BTNTEXT);
@@ -2411,6 +2483,245 @@ VOID PhTabNewPaintUxTheme(
     }
 }
 
+static WCHAR PhpTabNewWin11GlyphForLabel(
+    _In_opt_ PPH_STRING Text
+    )
+{
+    if (!Text || Text->Length == 0)
+        return 0xE7C3; // Document / generic page
+
+    if (PhEqualString2(Text, L"Processes", TRUE))
+        return 0xE9D9; // Diagnostic / Processes grid
+    if (PhEqualString2(Text, L"Services", TRUE))
+        return 0xE713; // Settings / Gear
+    if (PhEqualString2(Text, L"Network", TRUE))
+        return 0xE968; // Globe / Network
+    if (PhEqualString2(Text, L"Disk", TRUE))
+        return 0xEDA2; // HardDrive
+    if (PhEqualString2(Text, L"Devices", TRUE))
+        return 0xE977; // Devices / System
+    if (PhEqualString2(Text, L"GPU", TRUE))
+        return 0xE7F4; // Display / GPU
+    if (PhEqualString2(Text, L"Performance", TRUE) || PhEqualString2(Text, L"System Information", TRUE))
+        return 0xE9D2; // AreaChart
+    if (PhEqualString2(Text, L"Users", TRUE))
+        return 0xE716; // People
+    if (PhEqualString2(Text, L"Firewall", TRUE))
+        return 0xEA18; // Shield
+    if (PhEqualString2(Text, L"Windows", TRUE))
+        return 0xE737; // Window
+
+    return 0xE7C3; // Default fluent page glyph
+}
+
+/**
+ * Paints the control using the Windows 11 Fluent NavigationView / pill tab skin.
+ *
+ * \param Context A pointer to the tab control context.
+ * \param Hdc A handle to a device context.
+ * \param ClientRect A pointer to the client rectangle.
+ */
+VOID PhTabNewPaintWin11(
+    _In_ PPH_TABNEW_CONTEXT Context,
+    _In_ HDC Hdc,
+    _In_ PRECT ClientRect
+    )
+{
+    COLORREF textColor = PhTabNewTextColor(Context);
+    COLORREF mutedTextColor = PhEnableThemeSupport ? PhThemeWindowDisabledTextColor : GetSysColor(COLOR_GRAYTEXT);
+    COLORREF accentColor = PhEnableThemeSupport ? PhThemeWindowFocusBorderColor : GetSysColor(COLOR_HOTLIGHT);
+    COLORREF selectedPillColor = Context->ThemeDark ? RGB(45, 45, 45) : RGB(234, 234, 234);
+    COLORREF hotPillColor = Context->ThemeDark ? RGB(39, 39, 39) : RGB(238, 238, 238);
+    COLORREF dividerColor = PhEnableThemeSupport ? PhThemeWindowBorderColor : RGB(229, 229, 229);
+    BOOLEAN vertical = (Context->Side == TNS_LEFT || Context->Side == TNS_RIGHT);
+    LONG radius = PhScaleToDisplay(4, Context->WindowDpi);
+    LONG insetX = PhScaleToDisplay(vertical ? 6 : 3, Context->WindowDpi);
+    LONG insetY = PhScaleToDisplay(vertical ? 2 : 3, Context->WindowDpi);
+    ULONG i;
+
+    PhTabNewFillBackground(Context, Hdc, ClientRect);
+
+    for (i = 0; i < Context->Items->Count; i++)
+    {
+        PPH_TABNEW_INTERNAL_ITEM item = Context->Items->Items[i];
+        RECT itemRect;
+        RECT pillRect;
+        BOOLEAN selected = ((LONG)i == Context->SelectedIndex);
+        BOOLEAN isHot = ((LONG)i == Context->HotIndex);
+
+        PhTabNewGetItemRectInClient(Context, item, &itemRect);
+        pillRect = itemRect;
+        pillRect.left += insetX;
+        pillRect.right -= insetX;
+        pillRect.top += insetY;
+        pillRect.bottom -= insetY;
+
+        if (selected || isHot)
+        {
+            HBRUSH oldBrush;
+            HPEN oldPen;
+
+            SetDCBrushColor(Hdc, selected ? selectedPillColor : hotPillColor);
+            oldBrush = SelectBrush(Hdc, PhStockDcBrush);
+            oldPen = SelectPen(Hdc, PhGetStockPen(NULL_PEN));
+            RoundRect(
+                Hdc,
+                pillRect.left,
+                pillRect.top,
+                pillRect.right,
+                pillRect.bottom,
+                radius * 2,
+                radius * 2
+                );
+            SelectPen(Hdc, oldPen);
+            SelectBrush(Hdc, oldBrush);
+        }
+
+        if (selected)
+        {
+            RECT indicatorRect;
+            HBRUSH oldBrush;
+            HPEN oldPen;
+
+            if (vertical)
+            {
+                LONG barW = PhScaleToDisplay(3, Context->WindowDpi);
+                LONG barH = PhScaleToDisplay(16, Context->WindowDpi);
+                LONG midY = (pillRect.top + pillRect.bottom) / 2;
+
+                if (Context->Side == TNS_LEFT)
+                {
+                    indicatorRect.left = pillRect.left;
+                    indicatorRect.right = pillRect.left + barW;
+                }
+                else
+                {
+                    indicatorRect.right = pillRect.right;
+                    indicatorRect.left = pillRect.right - barW;
+                }
+
+                indicatorRect.top = midY - barH / 2;
+                indicatorRect.bottom = indicatorRect.top + barH;
+            }
+            else
+            {
+                LONG barH = PhScaleToDisplay(3, Context->WindowDpi);
+                LONG barW = __max(PhScaleToDisplay(18, Context->WindowDpi), (pillRect.right - pillRect.left) / 2);
+                LONG midX = (pillRect.left + pillRect.right) / 2;
+
+                indicatorRect.left = midX - barW / 2;
+                indicatorRect.right = indicatorRect.left + barW;
+                if (Context->Side == TNS_BOTTOM)
+                {
+                    indicatorRect.top = pillRect.top;
+                    indicatorRect.bottom = pillRect.top + barH;
+                }
+                else
+                {
+                    indicatorRect.bottom = pillRect.bottom;
+                    indicatorRect.top = pillRect.bottom - barH;
+                }
+            }
+
+            SetDCBrushColor(Hdc, accentColor);
+            oldBrush = SelectBrush(Hdc, PhStockDcBrush);
+            oldPen = SelectPen(Hdc, PhGetStockPen(NULL_PEN));
+            RoundRect(
+                Hdc,
+                indicatorRect.left,
+                indicatorRect.top,
+                indicatorRect.right,
+                indicatorRect.bottom,
+                PhScaleToDisplay(3, Context->WindowDpi),
+                PhScaleToDisplay(3, Context->WindowDpi)
+                );
+            SelectPen(Hdc, oldPen);
+            SelectBrush(Hdc, oldBrush);
+        }
+
+        if (vertical)
+        {
+            RECT iconRect = pillRect;
+            RECT textRect = pillRect;
+            LONG glyphBox = PhScaleToDisplay(28, Context->WindowDpi);
+            LONG padLeft = PhScaleToDisplay(10, Context->WindowDpi);
+            WCHAR glyph = PhpTabNewWin11GlyphForLabel(item->Text);
+
+            SetBkMode(Hdc, TRANSPARENT);
+
+            if (Context->IconFont)
+            {
+                HFONT oldIconFont = SelectFont(Hdc, Context->IconFont);
+
+                iconRect.left += padLeft;
+                iconRect.right = iconRect.left + glyphBox;
+                SetTextColor(Hdc, selected ? accentColor : (isHot ? textColor : mutedTextColor));
+                DrawText(Hdc, &glyph, 1, &iconRect, DT_SINGLELINE | DT_VCENTER | DT_CENTER);
+                SelectFont(Hdc, oldIconFont);
+            }
+
+            if (item->Text && item->Text->Length > 0)
+            {
+                textRect.left += padLeft + glyphBox + PhScaleToDisplay(4, Context->WindowDpi);
+                textRect.right -= PhScaleToDisplay(10, Context->WindowDpi);
+                SetTextColor(Hdc, selected || isHot ? textColor : (Context->ThemeDark ? RGB(220, 220, 220) : RGB(45, 45, 45)));
+                DrawText(
+                    Hdc,
+                    item->Text->Buffer,
+                    (LONG)(item->Text->Length / sizeof(WCHAR)),
+                    &textRect,
+                    DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS
+                    );
+            }
+        }
+        else
+        {
+            if (item->Text && item->Text->Length > 0)
+            {
+                RECT textRect = pillRect;
+                SetBkMode(Hdc, TRANSPARENT);
+                SetTextColor(Hdc, selected || isHot ? textColor : (Context->ThemeDark ? RGB(212, 212, 212) : RGB(55, 55, 55)));
+                DrawText(
+                    Hdc,
+                    item->Text->Buffer,
+                    (LONG)(item->Text->Length / sizeof(WCHAR)),
+                    &textRect,
+                    DT_SINGLELINE | DT_VCENTER | DT_CENTER | DT_NOPREFIX
+                    );
+            }
+        }
+    }
+
+    // Subtle 1px hairline divider between the navigation strip and content area.
+    {
+        RECT divRect = *ClientRect;
+
+        switch (Context->Side)
+        {
+        case TNS_LEFT:
+            divRect.left = (LONG)Context->StripThickness - 1;
+            divRect.right = (LONG)Context->StripThickness;
+            break;
+        case TNS_RIGHT:
+            divRect.left = (ClientRect->right - ClientRect->left) - (LONG)Context->StripThickness;
+            divRect.right = divRect.left + 1;
+            break;
+        case TNS_BOTTOM:
+            divRect.top = (ClientRect->bottom - ClientRect->top) - (LONG)Context->StripThickness;
+            divRect.bottom = divRect.top + 1;
+            break;
+        case TNS_TOP:
+        default:
+            divRect.top = (LONG)Context->StripThickness - 1;
+            divRect.bottom = (LONG)Context->StripThickness;
+            break;
+        }
+
+        SetDCBrushColor(Hdc, dividerColor);
+        FillRect(Hdc, &divRect, PhStockDcBrush);
+    }
+}
+
 /**
  * Dispatches painting to the appropriate skin handler.
  *
@@ -2444,6 +2755,9 @@ VOID PhTabNewPaint(
         break;
     case PhTabNewSkinWin7:
         PhTabNewPaintWin7(Context, Hdc, ClientRect);
+        break;
+    case PhTabNewSkinWin11:
+        PhTabNewPaintWin11(Context, Hdc, ClientRect);
         break;
     }
 

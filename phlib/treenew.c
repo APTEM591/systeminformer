@@ -3396,7 +3396,13 @@ VOID PhTnpUpdateTextMetrics(
             Context->RowHeight += Context->HeaderRowMargin; // HACK
 
             if (!(Context->Style & TN_STYLE_THIN_ROWS))
+            {
                 Context->RowHeight += Context->HeaderTextMargin; // HACK
+
+                // Modern Windows 11 comfortable scannable row density (like Win11 Task Manager).
+                if (PhEnableThemeSupport && WindowsVersion >= WINDOWS_11)
+                    Context->RowHeight += PhScaleToDisplay(6, Context->WindowDpi);
+            }
         }
 
         ReleaseDC(Context->Handle, hdc);
@@ -7840,7 +7846,7 @@ VOID PhTnpPaint(
                 SetDCBrushColor(hdc, PhpTnpBlendColor(
                     PhThemeWindowBackgroundColor,
                     node->s.DrawBackColor,
-                    TNP_THEME_ROW_BLEND_ALPHA
+                    PhThemeWindowUseDarkBackground() ? 72 : 110
                     ));
                 FillRect(hdc, &rowRect, PhGetStockBrush(DC_BRUSH));
             }
@@ -7849,10 +7855,48 @@ VOID PhTnpPaint(
                 FillRect(hdc, &rowRect, PhThemeWindowBackgroundBrush);
             }
 
-            // Draw the outline of the selection rectangle (Dart Vanya)
-            if (Context->HasFocus && node->Selected)
+            // Modern Windows 11 rounded-pill row hover & selection highlight.
+            if (node->Selected || i == Context->HotNodeIndex)
             {
-                FrameRect(hdc, &rowRect, PhThemeWindowBackgroundBrush);
+                RECT pillRect = rowRect;
+                LONG insetX = PhScaleToDisplay(4, Context->WindowDpi);
+                LONG insetY = PhScaleToDisplay(1, Context->WindowDpi);
+                LONG radius = PhScaleToDisplay(4, Context->WindowDpi);
+                COLORREF pillColor;
+                HBRUSH oldBrush;
+                HPEN oldPen;
+
+                if (!Context->FixedColumnVisible)
+                    pillRect.left = Context->NormalLeft - hScrollPosition;
+
+                pillRect.left += insetX;
+                pillRect.right -= insetX;
+                pillRect.top += insetY;
+                pillRect.bottom -= insetY;
+
+                if (node->Selected)
+                {
+                    if (i == Context->HotNodeIndex)
+                        pillColor = PhThemeWindowHighlight2Color;
+                    else if (!Context->HasFocus)
+                        pillColor = PhThemeWindowBackground2Color;
+                    else
+                        pillColor = PhThemeWindowHighlightColor;
+                }
+                else
+                {
+                    pillColor = PhThemeWindowBackground2Color;
+                }
+
+                if (pillRect.right > pillRect.left && pillRect.bottom > pillRect.top)
+                {
+                    SetDCBrushColor(hdc, pillColor);
+                    oldBrush = SelectBrush(hdc, PhGetStockBrush(DC_BRUSH));
+                    oldPen = SelectPen(hdc, PhGetStockPen(NULL_PEN));
+                    RoundRect(hdc, pillRect.left, pillRect.top, pillRect.right, pillRect.bottom, radius * 2, radius * 2);
+                    SelectPen(hdc, oldPen);
+                    SelectBrush(hdc, oldBrush);
+                }
             }
         }
         else
@@ -7899,7 +7943,7 @@ VOID PhTnpPaint(
             }
         }
 
-        if (!Context->CustomColors && Context->ThemeHasItemBackground)
+        if (!Context->ThemeSupport && !Context->CustomColors && Context->ThemeHasItemBackground)
         {
             INT stateId;
 
@@ -7981,20 +8025,45 @@ VOID PhTnpPaint(
             SelectClipRgn(hdc, hasOldClipRegion ? oldClipRegion : NULL);
         }
 
-        // Paint the accent bar for selected rows. This is done last so the cells above don't
+        // Paint the accent pill for selected rows. This is done last so the cells above don't
         // paint over it. (dmex)
 
         if (selectionBarVisible && node->Selected)
         {
-            RECT selectionBarRect;
+            if (Context->ThemeSupport && WindowsVersion >= WINDOWS_11)
+            {
+                RECT pillBar;
+                LONG barW = PhScaleToDisplay(3, Context->WindowDpi);
+                LONG barH = __min(PhScaleToDisplay(16, Context->WindowDpi), __max(8, Context->RowHeight - PhScaleToDisplay(8, Context->WindowDpi)));
+                LONG midY = (rowRect.top + rowRect.bottom) / 2;
+                LONG padLeft = PhScaleToDisplay(4, Context->WindowDpi);
+                HBRUSH oldBrush;
+                HPEN oldPen;
 
-            selectionBarRect.left = selectionBarLeft;
-            selectionBarRect.top = rowRect.top;
-            selectionBarRect.right = selectionBarLeft + selectionBarWidth;
-            selectionBarRect.bottom = rowRect.bottom;
+                pillBar.left = selectionBarLeft + padLeft;
+                pillBar.right = pillBar.left + barW;
+                pillBar.top = midY - barH / 2;
+                pillBar.bottom = pillBar.top + barH;
 
-            SetDCBrushColor(hdc, selectionBarColor);
-            FillRect(hdc, &selectionBarRect, PhGetStockBrush(DC_BRUSH));
+                SetDCBrushColor(hdc, selectionBarColor);
+                oldBrush = SelectBrush(hdc, PhGetStockBrush(DC_BRUSH));
+                oldPen = SelectPen(hdc, PhGetStockPen(NULL_PEN));
+                RoundRect(hdc, pillBar.left, pillBar.top, pillBar.right, pillBar.bottom, barW, barW);
+                SelectPen(hdc, oldPen);
+                SelectBrush(hdc, oldBrush);
+            }
+            else
+            {
+                RECT selectionBarRect;
+
+                selectionBarRect.left = selectionBarLeft;
+                selectionBarRect.top = rowRect.top;
+                selectionBarRect.right = selectionBarLeft + selectionBarWidth;
+                selectionBarRect.bottom = rowRect.bottom;
+
+                SetDCBrushColor(hdc, selectionBarColor);
+                FillRect(hdc, &selectionBarRect, PhGetStockBrush(DC_BRUSH));
+            }
         }
 
         rowRect.top += Context->RowHeight;
@@ -9292,14 +9361,8 @@ BOOLEAN TnHeaderCustomPaint(
 
             if (Context->HeaderDragging)
             {
-                SetDCBrushColor(CustomDraw->hdc, RGB(0, 0, 229));
+                SetDCBrushColor(CustomDraw->hdc, PhThemeWindowFocusBorderColor);
                 PatBlt(CustomDraw->hdc, CustomDraw->rc.right - 2, CustomDraw->rc.top, 2, CustomDraw->rc.bottom - CustomDraw->rc.top, PATCOPY);
-            }
-            else
-            {
-                SetDCBrushColor(CustomDraw->hdc, PhThemeWindowBorderColor);
-                PatBlt(CustomDraw->hdc, CustomDraw->rc.right - 1, CustomDraw->rc.top, 1, CustomDraw->rc.bottom - CustomDraw->rc.top, PATCOPY);
-                //PatBlt(CustomDraw->hdc, CustomDraw->rc.left, CustomDraw->rc.bottom - 1, CustomDraw->rc.right - CustomDraw->rc.left, 1, PATCOPY);
             }
 
             if (oldBrush)
@@ -9344,14 +9407,8 @@ BOOLEAN TnHeaderCustomPaint(
 
             if (Context->HeaderDragging && Context->HeaderHotColumn == column->Id)
             {
-                SetDCBrushColor(CustomDraw->hdc, RGB(0, 0, 229));
+                SetDCBrushColor(CustomDraw->hdc, PhThemeWindowFocusBorderColor);
                 PatBlt(CustomDraw->hdc, CustomDraw->rc.right - 2, CustomDraw->rc.top, 2, CustomDraw->rc.bottom - CustomDraw->rc.top, PATCOPY);
-            }
-            else
-            {
-                SetDCBrushColor(CustomDraw->hdc, PhThemeWindowBorderColor);
-                PatBlt(CustomDraw->hdc, CustomDraw->rc.right - 1, CustomDraw->rc.top, 1, CustomDraw->rc.bottom - CustomDraw->rc.top, PATCOPY);
-                //PatBlt(Hdc, CustomDraw->rc.left, CustomDraw->rc.bottom - 1, CustomDraw->rc.right - CustomDraw->rc.left, 1, PATCOPY);
             }
 
             if (oldBrush)
@@ -9442,11 +9499,23 @@ BOOLEAN TnHeaderCustomPaint(
             if (oldFont) SelectFont(CustomDraw->hdc, oldFont);
         }
 
-        //DrawEdge(CustomDraw->hdc, &CustomDraw->rc, EDGE_SUNKEN, BF_SOFT | BF_RIGHT);
-        SetDCBrushColor(CustomDraw->hdc, Context->ThemeSupport ? PhThemeWindowBorderColor : RGB(229, 229, 229));
-        HBRUSH oldBrush = SelectBrush(CustomDraw->hdc, PhGetStockBrush(DC_BRUSH));
-        PatBlt(CustomDraw->hdc, CustomDraw->rc.right - 1, CustomDraw->rc.top, 1, CustomDraw->rc.bottom - CustomDraw->rc.top, PATCOPY);
-        SelectBrush(CustomDraw->hdc, oldBrush);
+        // Subtle Windows 11 inset vertical column divider + bottom hairline border.
+        {
+            LONG insetY = PhScaleToDisplay(5, Context->WindowDpi);
+            LONG divTop = CustomDraw->rc.top + insetY;
+            LONG divHeight = (CustomDraw->rc.bottom - CustomDraw->rc.top) - insetY * 2;
+            HBRUSH oldBrush = SelectBrush(CustomDraw->hdc, PhGetStockBrush(DC_BRUSH));
+
+            SetDCBrushColor(CustomDraw->hdc, Context->ThemeSupport ? PhThemeWindowBorderColor : RGB(229, 229, 229));
+
+            if (divHeight > 0)
+                PatBlt(CustomDraw->hdc, CustomDraw->rc.right - 1, divTop, 1, divHeight, PATCOPY);
+
+            if (Context->ThemeSupport)
+                PatBlt(CustomDraw->hdc, CustomDraw->rc.left, CustomDraw->rc.bottom - 1, CustomDraw->rc.right - CustomDraw->rc.left, 1, PATCOPY);
+
+            SelectBrush(CustomDraw->hdc, oldBrush);
+        }
 
         if (FlagOn(fmt, HDF_SORTDOWN | HDF_SORTUP))
         {

@@ -806,7 +806,7 @@ VOID PhScrollNewInitialize(
 {
     memset(Context, 0, sizeof(PH_SCROLLNEW_STATE));
     Context->Horizontal = !(CreateStruct->style & SBS_VERT);
-    Context->Theme = PhScrollNewThemeWin10;
+    Context->Theme = (WindowsVersion >= WINDOWS_11) ? PhScrollNewThemeWin11 : PhScrollNewThemeWin10;
     Context->HotPart = PhScrollNewPartNone;
     Context->PressedPart = PhScrollNewPartNone;
 }
@@ -1110,13 +1110,14 @@ VOID PhScrollNewDraw(
         Context->Theme == PhScrollNewThemeWin11Overlay)
     {
         HBRUSH brush = PhStockDcBrush;
-        COLORREF track = PhEnableThemeSupport ? PH_SCROLLNEW_WIN11_TRACK_DARK : PH_SCROLLNEW_WIN11_TRACK_LIGHT;
-        COLORREF thumb = PhEnableThemeSupport ? PH_SCROLLNEW_WIN11_THUMB_DARK : PH_SCROLLNEW_WIN11_THUMB_LIGHT;
+        BOOLEAN darkMode = PhThemeWindowUseDarkBackground();
+        COLORREF track = PhEnableThemeSupport ? PhThemeWindowBackgroundColor : (darkMode ? PH_SCROLLNEW_WIN11_TRACK_DARK : PH_SCROLLNEW_WIN11_TRACK_LIGHT);
+        COLORREF thumb = darkMode ? PH_SCROLLNEW_WIN11_THUMB_DARK : PH_SCROLLNEW_WIN11_THUMB_LIGHT;
 
         if (Context->PressedPart == PhScrollNewPartThumb)
-            thumb = PhEnableThemeSupport ? PH_SCROLLNEW_WIN11_THUMB_PRESS_DARK : PH_SCROLLNEW_WIN11_THUMB_PRESS_LIGHT;
+            thumb = darkMode ? PH_SCROLLNEW_WIN11_THUMB_PRESS_DARK : PH_SCROLLNEW_WIN11_THUMB_PRESS_LIGHT;
         else if (Context->HotPart == PhScrollNewPartThumb)
-            thumb = PhEnableThemeSupport ? PH_SCROLLNEW_WIN11_THUMB_HOT_DARK : PH_SCROLLNEW_WIN11_THUMB_HOT_LIGHT;
+            thumb = darkMode ? PH_SCROLLNEW_WIN11_THUMB_HOT_DARK : PH_SCROLLNEW_WIN11_THUMB_HOT_LIGHT;
 
         SetDCBrushColor(hdc, track);
         FillRect(hdc, &Context->Rect, brush);
@@ -1124,7 +1125,24 @@ VOID PhScrollNewDraw(
         if (hasThumb)
         {
             RECT thumbRect = Context->ThumbRect;
-            LONG radius = __min(thumbRect.right - thumbRect.left, thumbRect.bottom - thumbRect.top) / 2;
+            LONG thickness = __min(thumbRect.right - thumbRect.left, thumbRect.bottom - thumbRect.top);
+            // Keep a slim resting pill like Windows 11 Task Manager / Explorer, widening slightly on hover/drag.
+            if (!Context->MouseInClient && Context->PressedPart == PhScrollNewPartNone && thickness > 6)
+            {
+                LONG shrink = (thickness - 6) / 2;
+                if (vertical)
+                {
+                    thumbRect.left += shrink;
+                    thumbRect.right -= shrink;
+                }
+                else
+                {
+                    thumbRect.top += shrink;
+                    thumbRect.bottom -= shrink;
+                }
+            }
+
+            LONG radius = __max(2, __min(thumbRect.right - thumbRect.left, thumbRect.bottom - thumbRect.top) / 2);
             HGDIOBJ oldBrush = SelectBrush(hdc, brush);
             HGDIOBJ oldPen = SelectPen(hdc, PhGetStockPen(NULL_PEN));
             SetDCBrushColor(hdc, thumb);

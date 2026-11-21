@@ -55,6 +55,7 @@ typedef struct _PH_TABNEW_CONTEXT
 
     LONG WindowDpi;
     HFONT Font;
+    HFONT IconFont;            // Segoe Fluent Icons / Segoe MDL2 Assets for Win11 skin
     HIMAGELIST ImageList;
     HTHEME ThemeHandle;        // for PhTabNewSkinUxTheme
     HDC BufferedContext;
@@ -232,6 +233,12 @@ VOID PhTabNewPaintWin7(
     );
 
 VOID PhTabNewPaintUxTheme(
+    _In_ PPH_TABNEW_CONTEXT Context,
+    _In_ HDC Hdc,
+    _In_ PRECT ClientRect
+    );
+
+VOID PhTabNewPaintWin11(
     _In_ PPH_TABNEW_CONTEXT Context,
     _In_ HDC Hdc,
     _In_ PRECT ClientRect

@@ -197,8 +197,8 @@ LONG ToolbarGetCommandBarButtonHeight(
         return 0;
 
     dpiValue = PhGetWindowDpi(ToolBarHandle);
-    buttonHeight = PhScaleToDisplay(24, dpiValue);
-    contentHeight = ToolBarImageSize.cy + PhScaleToDisplay(4, dpiValue);
+    buttonHeight = PhScaleToDisplay(EnableThemeSupport ? 30 : 24, dpiValue);
+    contentHeight = ToolBarImageSize.cy + PhScaleToDisplay(EnableThemeSupport ? 6 : 4, dpiValue);
 
     if (ToolbarWindowFont)
         contentHeight = __max(contentHeight, ToolStatusGetWindowFontSize(ToolBarHandle, ToolbarWindowFont));
@@ -229,7 +229,7 @@ VOID ToolbarUpdateBandSize(
     dpiValue = PhGetWindowDpi(ToolBarHandle);
     toolbarButtonSize = (ULONG)SendMessage(ToolBarHandle, TB_GETBUTTONSIZE, 0, 0);
     buttonHeight = ToolbarGetCommandBarButtonHeight();
-    commandBarHeight = PhScaleToDisplay(24, dpiValue);
+    commandBarHeight = PhScaleToDisplay(EnableThemeSupport ? 30 : 24, dpiValue);
 
     // cyChild/cyMinChild describe the toolbar child, not the complete rebar
     // decoration. The rebar adds its own band borders around this height.
@@ -455,7 +455,7 @@ VOID SearchBoxUpdateRebarBand(
         height = PhScaleToDisplay(22, dpiValue);
     }
 
-    width = PhScaleToDisplay(255, dpiValue);
+    width = PhScaleToDisplay(EnableThemeSupport ? 280 : 255, dpiValue);
 
     if ((bandIndex = RebarBandToIndex(REBAR_BAND_ID_SEARCHBOX)) == ULONG_MAX)
     {

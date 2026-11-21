@@ -1779,7 +1779,37 @@ VOID PhSipDrawRestoreSummaryPanel(
 
     if (RestoreSummaryControlHot || RestoreSummaryControlHasFocus)
     {
-        if (ThemeHasItemBackground)
+        if (PhEnableThemeSupport && WindowsVersion >= WINDOWS_11)
+        {
+            RECT pillRect = bufferRect;
+            LONG dpi = PhGetWindowDpi(DrawItemStruct->hwndItem);
+            LONG insetX = PhScaleToDisplay(4, dpi);
+            LONG insetY = PhScaleToDisplay(2, dpi);
+            LONG radius = PhScaleToDisplay(4, dpi);
+            HBRUSH oldBrush;
+            HPEN oldPen;
+
+            PhInflateRect(&pillRect, -insetX, -insetY);
+
+            if (pillRect.right > pillRect.left && pillRect.bottom > pillRect.top)
+            {
+                SetDCBrushColor(bufferDc, PhThemeWindowBackground2Color);
+                oldBrush = SelectBrush(bufferDc, PhStockDcBrush);
+                oldPen = SelectPen(bufferDc, GetStockPen(NULL_PEN));
+                RoundRect(
+                    bufferDc,
+                    pillRect.left,
+                    pillRect.top,
+                    pillRect.right + 1,
+                    pillRect.bottom + 1,
+                    radius * 2,
+                    radius * 2
+                    );
+                SelectPen(bufferDc, oldPen);
+                SelectBrush(bufferDc, oldBrush);
+            }
+        }
+        else if (ThemeHasItemBackground)
         {
             PhDrawThemeBackground(
                 ThemeData,
@@ -1838,22 +1868,16 @@ VOID PhSipDrawSeparator(
 
     if (PhEnableThemeSupport)
     {
-        switch (PhSiGetGraphPalette())
+        SetDCBrushColor(bufferDc, PhThemeWindowBackgroundColor);
+        FillRect(bufferDc, &bufferRect, PhStockDcBrush);
+
+        if (WindowsVersion >= WINDOWS_11 && bufferRect.right > bufferRect.left)
         {
-        case PhSiGraphPaletteLight:
-            {
-                //FillRect(bufferDc, &bufferRect, GetSysColorBrush(COLOR_3DFACE));
-                //bufferRect.left += 1;
-                //FillRect(bufferDc, &bufferRect, GetSysColorBrush(COLOR_3DSHADOW));
-                //bufferRect.left -= 1;
-            }
-            break;
-        case PhSiGraphPaletteDark:
-            {
-                SetDCBrushColor(bufferDc, PhThemeWindowBackgroundColor);
-                FillRect(bufferDc, &bufferRect, PhStockDcBrush);
-            }
-            break;
+            RECT lineRect = bufferRect;
+            lineRect.left = (bufferRect.left + bufferRect.right) / 2;
+            lineRect.right = lineRect.left + 1;
+            SetDCBrushColor(bufferDc, PhThemeWindowBorderColor);
+            FillRect(bufferDc, &lineRect, PhStockDcBrush);
         }
     }
     else
@@ -1896,18 +1920,8 @@ VOID PhSipDrawPanel(
     {
         if (PhEnableThemeSupport)
         {
-            switch (PhSiGetGraphPalette())
-            {
-            case PhSiGraphPaletteLight:
-                SetDCBrushColor(hdc, RGB(0xff, 0xff, 0xff));
-                FillRect(hdc, Rect, PhGetStockBrush(DC_BRUSH));
-                break;
-            case PhSiGraphPaletteDark:
-            default:
-                SetDCBrushColor(hdc, PhThemeWindowBackgroundColor);
-                FillRect(hdc, Rect, PhGetStockBrush(DC_BRUSH));
-                break;
-            }
+            SetDCBrushColor(hdc, PhThemeWindowBackgroundColor);
+            FillRect(hdc, Rect, PhGetStockBrush(DC_BRUSH));
         }
         else
         {
@@ -1967,7 +1981,80 @@ VOID PhSipDefaultDrawPanel(
 
     hdc = DrawPanel->hdc;
 
-    if (ThemeHasItemBackground)
+    if (PhEnableThemeSupport && WindowsVersion >= WINDOWS_11)
+    {
+        if (CurrentView == SysInfoSectionView)
+        {
+            BOOLEAN isSelected = (Section == CurrentSection);
+            BOOLEAN isHot = (Section->GraphHot || Section->PanelHot || (Section->HasFocus && !Section->HideFocus));
+
+            if (isSelected || isHot)
+            {
+                RECT pillRect = DrawPanel->Rect;
+                LONG dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+                LONG insetX;
+                LONG insetY;
+                LONG radius;
+                HBRUSH oldBrush;
+                HPEN oldPen;
+
+                if (dpi <= 0)
+                    dpi = USER_DEFAULT_SCREEN_DPI;
+
+                insetX = PhScaleToDisplay(4, dpi);
+                insetY = PhScaleToDisplay(2, dpi);
+                radius = PhScaleToDisplay(4, dpi);
+
+                PhInflateRect(&pillRect, -insetX, -insetY);
+
+                if (pillRect.right > pillRect.left && pillRect.bottom > pillRect.top)
+                {
+                    SetDCBrushColor(hdc, isSelected ? PhThemeWindowHighlightColor : PhThemeWindowBackground2Color);
+                    oldBrush = SelectBrush(hdc, PhGetStockBrush(DC_BRUSH));
+                    oldPen = SelectPen(hdc, GetStockPen(NULL_PEN));
+                    RoundRect(
+                        hdc,
+                        pillRect.left,
+                        pillRect.top,
+                        pillRect.right + 1,
+                        pillRect.bottom + 1,
+                        radius * 2,
+                        radius * 2
+                        );
+
+                    if (isSelected)
+                    {
+                        LONG pillWidth = max(3, PhScaleToDisplay(3, dpi));
+                        LONG pillInsetY = PhScaleToDisplay(8, dpi);
+                        RECT accentRect;
+
+                        accentRect.left = pillRect.left;
+                        accentRect.right = pillRect.left + pillWidth;
+                        accentRect.top = pillRect.top + pillInsetY;
+                        accentRect.bottom = pillRect.bottom - pillInsetY;
+
+                        if (accentRect.bottom > accentRect.top)
+                        {
+                            SetDCBrushColor(hdc, PhThemeWindowFocusBorderColor);
+                            RoundRect(
+                                hdc,
+                                accentRect.left,
+                                accentRect.top,
+                                accentRect.right + 1,
+                                accentRect.bottom + 1,
+                                pillWidth,
+                                pillWidth
+                                );
+                        }
+                    }
+
+                    SelectPen(hdc, oldPen);
+                    SelectBrush(hdc, oldBrush);
+                }
+            }
+        }
+    }
+    else if (ThemeHasItemBackground)
     {
         if (CurrentView == SysInfoSummaryView)
         {
