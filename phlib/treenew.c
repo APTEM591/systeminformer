@@ -306,6 +306,62 @@ FORCEINLINE COLORREF PhpTnpBlendColor(
 }
 
 /**
+ * Transforms a row highlight color for dark mode into a deeper, more saturated tone.
+ *
+ * Default process/service highlight colors are light-mode pastels with high minimum
+ * channel values; linear alpha blending over a dark canvas washes them out to gray.
+ * Extracting the pure chroma and layering it over a deepened dark floor preserves
+ * hue identity while keeping rows dark, saturated, and high-contrast for white text.
+ *
+ * \param BackColor The dark theme background color.
+ * \param OverColor The source highlight color.
+ * \return The dark, saturated row background color.
+ */
+FORCEINLINE COLORREF PhpTnpDarkThemeRowColor(
+    _In_ COLORREF BackColor,
+    _In_ COLORREF OverColor
+    )
+{
+    ULONG r = GetRValue(OverColor);
+    ULONG g = GetGValue(OverColor);
+    ULONG b = GetBValue(OverColor);
+    ULONG minC = min(r, min(g, b));
+    ULONG maxC = max(r, max(g, b));
+    ULONG delta = maxC - minC;
+
+    if (delta <= 8)
+    {
+        return PhpTnpBlendColor(BackColor, OverColor, 44);
+    }
+    else
+    {
+        ULONG hueR = ((r - minC) * 255) / delta;
+        ULONG hueG = ((g - minC) * 255) / delta;
+        ULONG hueB = ((b - minC) * 255) / delta;
+        ULONG hueLuma = (hueR * 77 + hueG * 150 + hueB * 29) >> 8;
+        ULONG strength = 64 - (hueLuma * 20) / 255;
+        ULONG floorR = (GetRValue(BackColor) * 40) / 100;
+        ULONG floorG = (GetGValue(BackColor) * 40) / 100;
+        ULONG floorB = (GetBValue(BackColor) * 40) / 100;
+        COLORREF saturated;
+
+        saturated = RGB(
+            min(255UL, floorR + (hueR * strength) / 255),
+            min(255UL, floorG + (hueG * strength) / 255),
+            min(255UL, floorB + (hueB * strength) / 255)
+            );
+
+        if (delta < 32)
+        {
+            COLORREF neutral = PhpTnpBlendColor(BackColor, OverColor, 44);
+            return PhpTnpBlendColor(neutral, saturated, ((delta - 8) * 255) / 24);
+        }
+
+        return saturated;
+    }
+}
+
+/**
  * Invalidates the header item belonging to a single column.
  *
  * Hot tracking only changes the appearance of the column the mouse entered or left, so there is no
@@ -7843,11 +7899,11 @@ VOID PhTnpPaint(
 
             if (node->s.DrawBackColor != Context->DefaultBackColor)
             {
-                SetDCBrushColor(hdc, PhpTnpBlendColor(
-                    PhThemeWindowBackgroundColor,
-                    node->s.DrawBackColor,
-                    PhThemeWindowUseDarkBackground() ? 72 : 110
-                    ));
+                COLORREF rowColor = PhThemeWindowUseDarkBackground()
+                    ? PhpTnpDarkThemeRowColor(PhThemeWindowBackgroundColor, node->s.DrawBackColor)
+                    : PhpTnpBlendColor(PhThemeWindowBackgroundColor, node->s.DrawBackColor, 110);
+
+                SetDCBrushColor(hdc, rowColor);
                 FillRect(hdc, &rowRect, PhGetStockBrush(DC_BRUSH));
             }
             else
